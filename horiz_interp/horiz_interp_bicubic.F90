@@ -16,11 +16,11 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-module horiz_interp_bicubic_mod
+module horizontal_interpolator_bicubic_mod
 
   use mpp_mod,               only: mpp_error, FATAL, stdout, mpp_pe, mpp_root_pe
   use fms_mod,               only: write_version_number
-  use horiz_interp_type_mod, only: horiz_interp_type
+  use horizontal_interpolator_types_mod, only: bicubicHZI_t
   use constants_mod,         only: PI
 
 
@@ -51,12 +51,12 @@ module horiz_interp_bicubic_mod
 
    private
 
-   public  :: horiz_interp_bicubic, horiz_interp_bicubic_new, horiz_interp_bicubic_del, fill_xy
-   public  :: horiz_interp_bicubic_init
+   public  :: hzi_bicubic, hzi_new_bicubic, hzi_delete_bicubic, fill_xy
+   public  :: hzi_bicubic_init
 
-  interface horiz_interp_bicubic_new
-    module procedure horiz_interp_bicubic_new_1d
-    module procedure horiz_interp_bicubic_new_1d_s
+  interface hzi_new_bicubic
+    module procedure hzi_new_bicubic_1d
+    module procedure hzi_new_bicubic_1d_s
   end interface
 
 ! Include variable "version" to be written to log file.
@@ -81,7 +81,7 @@ module horiz_interp_bicubic_mod
 
 
    real, save         :: missing = -1e33
-   real               :: tpi
+   real               :: tpi = 2.0*PI
 
    interface fill_xy
       module procedure fill_xy
@@ -91,7 +91,7 @@ module horiz_interp_bicubic_mod
    contains
 
   !#######################################################################
-  !  <SUBROUTINE NAME="horiz_interp_bicubic_init">
+  !  <SUBROUTINE NAME="hzi_bicubic_init">
   !  <OVERVIEW>
   !     writes version number to logfile.out
   !  </OVERVIEW>
@@ -99,19 +99,18 @@ module horiz_interp_bicubic_mod
   !     writes version number to logfile.out
   !  </DESCRIPTION>
 
-  subroutine horiz_interp_bicubic_init
+  subroutine hzi_bicubic_init
 
      if(module_is_initialized) return
-     call write_version_number("HORIZ_INTERP_BICUBIC_MOD", version)
+     call write_version_number("hzi_bicubic_MOD", version)
      module_is_initialized = .true.
-     tpi = 2.0*PI
 
-  end subroutine horiz_interp_bicubic_init
+  end subroutine hzi_bicubic_init
 
   !  </SUBROUTINE>
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_bicubic_new">
+  ! <SUBROUTINE NAME="hzi_new_bicubic">
 
   !   <OVERVIEW>
   !      Initialization routine.
@@ -121,7 +120,7 @@ module horiz_interp_bicubic_mod
   !      that contains pre-computed interpolation indices and weights.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_bicubic_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose_bicubic, src_modulo )
+  !     call hzi_new_bicubic ( Interp, lon_in, lat_in, lon_out, lat_out, verbose_bicubic, src_modulo )
 
   !   </TEMPLATE>
   !
@@ -153,10 +152,10 @@ module horiz_interp_bicubic_mod
   !   <INOUT NAME="Interp" TYPE="type(horiz_interp_type)" >
   !      A derived-type variable containing indices and weights used for subsequent
   !      interpolations. To reinitialize this variable for a different grid-to-grid
-  !      interpolation you must first use the "horiz_interp_bicubic_del" interface.
+  !      interpolation you must first use the "hzi_bicubic_del" interface.
   !   </INOUT>
 
-  subroutine horiz_interp_bicubic_new_1d_s ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_new_bicubic_1d_s ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo )
 
     !-----------------------------------------------------------------------
@@ -199,7 +198,7 @@ module horiz_interp_bicubic_mod
 
     if ( verbose_bicubic > 0 ) then
        unit = stdout()
-       write (unit,'(/,"Initialising bicubic interpolation, interface horiz_interp_bicubic_new_1d_s")')
+       write (unit,'(/,"Initialising bicubic interpolation, interface hzi_new_bicubic_1d_s")')
        write (unit,'(/," Longitude of coarse grid points (radian): xc(i) i=1, ",i4)') Interp%nlon_src
        write (unit,'(1x,10f10.4)') (Interp%lon_in(jj),jj=1,Interp%nlon_src)
        write (unit,'(/," Latitude of coarse grid points (radian):  yc(j) j=1, ",i4)') Interp%nlat_src
@@ -299,15 +298,15 @@ module horiz_interp_bicubic_mod
           else
              Interp%rat_y(i,j) = (yz - Interp%lat_in(jcl))/(Interp%lat_in(jcu) - Interp%lat_in(jcl))
           endif
-!          if(yz.gt.Interp%lat_in(jcu)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d_s: yf < ycl, no valid boundary point')
-!          if(yz.lt.Interp%lat_in(jcl)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d_s: yf > ycu, no valid boundary point')
-!          if(xz.gt.Interp%lon_in(icu)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d_s: xf < xcl, no valid boundary point')
-!          if(xz.lt.Interp%lon_in(icl)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d_s: xf > xcu, no valid boundary point')
+!          if(yz.gt.Interp%lat_in(jcu)) call mpp_error(FATAL, ' hzi_new_bicubic_1d_s: yf < ycl, no valid boundary point')
+!          if(yz.lt.Interp%lat_in(jcl)) call mpp_error(FATAL, ' hzi_new_bicubic_1d_s: yf > ycu, no valid boundary point')
+!          if(xz.gt.Interp%lon_in(icu)) call mpp_error(FATAL, ' hzi_new_bicubic_1d_s: xf < xcl, no valid boundary point')
+!          if(xz.lt.Interp%lon_in(icl)) call mpp_error(FATAL, ' hzi_new_bicubic_1d_s: xf > xcu, no valid boundary point')
         enddo
       enddo
-  end subroutine horiz_interp_bicubic_new_1d_s
+  end subroutine hzi_new_bicubic_1d_s
   ! </SUBROUTINE>
-  subroutine horiz_interp_bicubic_new_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_new_bicubic_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo )
 
     !-----------------------------------------------------------------------
@@ -345,7 +344,7 @@ module horiz_interp_bicubic_mod
 
     if ( verbose_bicubic > 0 ) then
        unit = stdout()
-       write (unit,'(/,"Initialising bicubic interpolation, interface horiz_interp_bicubic_new_1d")')
+       write (unit,'(/,"Initialising bicubic interpolation, interface hzi_new_bicubic_1d")')
        write (unit,'(/," Longitude of coarse grid points (radian): xc(i) i=1, ",i4)') Interp%nlon_src
        write (unit,'(1x,10f10.4)') (Interp%lon_in(jj),jj=1,Interp%nlon_src)
        write (unit,'(/," Latitude of coarse grid points (radian):  yc(j) j=1, ",i4)') Interp%nlat_src
@@ -440,17 +439,17 @@ module horiz_interp_bicubic_mod
           else
              Interp%rat_y(i,j) = (yz - Interp%lat_in(jcl))/(Interp%lat_in(jcu) - Interp%lat_in(jcl))
           endif
-!          if(yz.gt.lat_in(jcu)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d: yf < ycl, no valid boundary point')
-!          if(yz.lt.lat_in(jcl)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d: yf > ycu, no valid boundary point')
-!          if(xz.gt.lon_in(icu)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d: xf < xcl, no valid boundary point')
-!          if(xz.lt.lon_in(icl)) call mpp_error(FATAL, ' horiz_interp_bicubic_new_1d: xf > xcu, no valid boundary point')
+!          if(yz.gt.lat_in(jcu)) call mpp_error(FATAL, ' hzi_new_bicubic_1d: yf < ycl, no valid boundary point')
+!          if(yz.lt.lat_in(jcl)) call mpp_error(FATAL, ' hzi_new_bicubic_1d: yf > ycu, no valid boundary point')
+!          if(xz.gt.lon_in(icu)) call mpp_error(FATAL, ' hzi_new_bicubic_1d: xf < xcl, no valid boundary point')
+!          if(xz.lt.lon_in(icl)) call mpp_error(FATAL, ' hzi_new_bicubic_1d: xf > xcu, no valid boundary point')
         enddo
       enddo
 
-  end subroutine horiz_interp_bicubic_new_1d
+  end subroutine hzi_new_bicubic_1d
 
-  subroutine horiz_interp_bicubic( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
-    type (horiz_interp_type), intent(in)        :: Interp
+  subroutine hzi_bicubic( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
+    type (bicubicHZI_t), intent(in)        :: Interp
     real, intent(in),  dimension(:,:)           :: data_in
     real, intent(out), dimension(:,:)           :: data_out
     integer, intent(in),               optional :: verbose
@@ -531,10 +530,7 @@ module horiz_interp_bicubic_mod
       enddo
     enddo
   return
-  end subroutine horiz_interp_bicubic
-
-
-!---------------------------------------------------------------------------
+  end subroutine hzi_bicubic
 
    subroutine bcuint(y,y1,y2,y12,x1l,x1u,x2l,x2u,t,u,ansy,ansy1,ansy2)
       real ansy,ansy1,ansy2,x1l,x1u,x2l,x2u,y(4),y1(4),y12(4),y2(4)
@@ -555,7 +551,6 @@ module horiz_interp_bicubic_mod
       return
 !  (c) copr. 1986-92 numerical recipes software -3#(-)f.
    end subroutine bcuint
-!---------------------------------------------------------------------------
 
    subroutine bcucof(y,y1,y2,y12,d1,d2,c)
       real d1,d2,c(4,4),y(4),y1(4),y12(4),y2(4)
@@ -599,8 +594,6 @@ module horiz_interp_bicubic_mod
 !  (c) copr. 1986-92 numerical recipes software -3#(-)f.
    end subroutine bcucof
 
-!-----------------------------------------------------------------------
-
     function indl(xc, xf)
 ! find the lower neighbour of xf in field xc, return is the index
     real, intent(in) :: xc(1:)
@@ -616,8 +609,6 @@ module horiz_interp_bicubic_mod
     return
     end function indl
 
-!-----------------------------------------------------------------------
-
     function indu(xc, xf)
 ! find the upper neighbour of xf in field xc, return is the index
     real, intent(in) :: xc(1:)
@@ -631,8 +622,6 @@ module horiz_interp_bicubic_mod
        call mpp_error(FATAL,'Error in indu')
     return
     end function indu
-
-!-----------------------------------------------------------------------
 
     subroutine fill_xy(fi, ics, ice, jcs, jce, mask, maxpass)
       integer, intent(in)        :: ics,ice,jcs,jce
@@ -753,18 +742,18 @@ module horiz_interp_bicubic_mod
       return
     end subroutine fill_xy
 
-  subroutine horiz_interp_bicubic_del( Interp )
+  subroutine hzi_delete_bicubic ( Interp )
 
-    type (horiz_interp_type), intent(inout) :: Interp
+    type (bicubicHZI_t), intent(inout) :: Interp
 
     if(associated(Interp%rat_x))  deallocate ( Interp%rat_x )
     if(associated(Interp%rat_y))  deallocate ( Interp%rat_y )
     if(associated(Interp%lon_in)) deallocate ( Interp%lon_in )
     if(associated(Interp%lat_in)) deallocate ( Interp%lat_in )
-    if(associated(Interp%i_lon))  deallocate ( Interp%i_lon )
-    if(associated(Interp%j_lat))  deallocate ( Interp%j_lat )
+    if(associated(Interp%ilon))  deallocate ( Interp%ilon )
+    if(associated(Interp%jlat))  deallocate ( Interp%jlat )
     if(associated(Interp%wti))    deallocate ( Interp%wti )
 
-  end subroutine horiz_interp_bicubic_del
+  end subroutine hzi_delete_bicubic
 
-end module horiz_interp_bicubic_mod
+end module horizontal_interpolator_bicubic_mod

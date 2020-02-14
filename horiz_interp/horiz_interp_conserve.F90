@@ -16,12 +16,10 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-module horiz_interp_conserve_mod
+module horizontal_interpolator_conservative_mod
 
   ! <CONTACT EMAIL="Bruce.Wyman@noaa.gov"> Bruce Wyman </CONTACT>
   ! <CONTACT EMAIL="Zhi.Liang@noaa.gov"> Zhi Liang </CONTACT>
-
-  ! <HISTORY SRC="http://www.gfdl.noaa.gov/fms-cgi-bin/cvsweb.cgi/FMS/"/>
 
   ! <OVERVIEW>
   !   Performs spatial interpolation between grids using conservative interpolation
@@ -31,13 +29,13 @@ module horiz_interp_conserve_mod
   !     This module can conservatively interpolate data from any logically rectangular grid
   !     to any rectangular grid. The interpolation scheme is area-averaging
   !     conservative scheme. There is an optional mask field for missing input data in both
-  !     horiz_interp__conserveinit and horiz_interp_conserve. For efficiency purpose, mask should only be
+  !     horiz_interp__conservativeinit and horiz_interp_conservative. For efficiency purpose, mask should only be
   !     kept in horiz_interp_init (will remove the mask in horiz_interp in the future).
-  !     There are 1-D and 2-D version of horiz_interp_conserve_init for 1-D and 2-D grid.
-  !     There is a optional argument mask in horiz_interp_conserve_init_2d and no mask should
+  !     There are 1-D and 2-D version of horiz_interp_conservative_init for 1-D and 2-D grid.
+  !     There is a optional argument mask in horiz_interp_conservative_init_2d and no mask should
   !     to passed into horiz_interp_conserv. optional argument mask will not be passed into
-  !     horiz_interp_conserve_init_1d and optional argument mask may be passed into
-  !     horiz_interp_conserve (For the purpose of reproduce Memphis??? results).
+  !     horiz_interp_conservative_init_1d and optional argument mask may be passed into
+  !     horiz_interp_conservative (For the purpose of reproduce Memphis??? results).
   !     An optional output mask field may be used in conjunction with the input mask to show
   !     where output data exists.
   ! </DESCRIPTION>
@@ -48,7 +46,7 @@ module horiz_interp_conserve_mod
   use fms_mod,               only: write_version_number
   use fms_io_mod,            only: get_great_circle_algorithm
   use constants_mod,         only: PI
-  use horiz_interp_type_mod, only: horiz_interp_type
+  use horizontal_interpolator_types_mod, only: conservative1HZI_t, conservative2HZI_t
 
 
   implicit none
@@ -57,7 +55,7 @@ module horiz_interp_conserve_mod
   ! public interface
 
 
-  ! <INTERFACE NAME="horiz_interp_conserve_new">
+  ! <INTERFACE NAME="horiz_interp_conservative_new">
   !   <OVERVIEW>
   !      Allocates space and initializes a derived-type variable
   !      that contains pre-computed interpolation indices and weights.
@@ -97,18 +95,29 @@ module horiz_interp_conserve_mod
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
-  interface horiz_interp_conserve_new
-     module procedure horiz_interp_conserve_new_1dx1d
-     module procedure horiz_interp_conserve_new_1dx2d
-     module procedure horiz_interp_conserve_new_2dx1d
-     module procedure horiz_interp_conserve_new_2dx2d
+  interface horiz_interp_conservative_new
+     module procedure horiz_interp_conservative_new_1dx1d
+     module procedure horiz_interp_conservative_new_1dx2d
+     module procedure horiz_interp_conservative_new_2dx1d
+     module procedure horiz_interp_conservative_new_2dx2d
   end interface
   ! </INTERFACE>
-  public :: horiz_interp_conserve_init
-  public :: horiz_interp_conserve_new, horiz_interp_conserve, horiz_interp_conserve_del
+
+interface horiz_interp_conservative
+   module procedure horiz_interp_conservative_version1
+   module procedure horiz_interp_conservative_version2
+end interface
+
+interface hzi_delete_conservative
+   module procedure hzi_delete_conservative1
+   module procedure hzi_delete_conservative2
+end interface hzi_delete_conservative
+
+  public :: horiz_interp_conservative_init
+  public :: horiz_interp_conservative_new, horiz_interp_conservative, hzi_delete_conservative1, hzi_delete_conservative2
 
   integer :: pe, root_pe
-  !-----------------------------------------------------------------------
+
   ! Include variable "version" to be written to log file.
 #include<file_version.h>
   logical            :: module_is_initialized = .FALSE.
@@ -117,38 +126,23 @@ module horiz_interp_conserve_mod
 
 contains
 
-  !#######################################################################
-  !  <SUBROUTINE NAME="horiz_interp_conserve_init">
-  !  <OVERVIEW>
-  !     writes version number to logfile.out
-  !  </OVERVIEW>
-  !  <DESCRIPTION>
-  !     writes version number to logfile.out
-  !  </DESCRIPTION>
-
-  subroutine horiz_interp_conserve_init
+  subroutine horiz_interp_conservative_init
 
     if(module_is_initialized) return
-    call write_version_number("HORIZ_INTERP_CONSERVE_MOD", version)
+    call write_version_number("HORIZ_INTERP_conservative_MOD", version)
 
     great_circle_algorithm = get_great_circle_algorithm()
 
     module_is_initialized = .true.
 
-  end subroutine horiz_interp_conserve_init
+  end subroutine horiz_interp_conservative_init
 
-  !  </SUBROUTINE>
+  subroutine horiz_interp_conservative_new_1dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+    type(conservative1HZI_t), intent(inout) :: Interp
+    real, intent(in),        dimension(:)   :: lon_in , lat_in
+    real, intent(in),        dimension(:)   :: lon_out, lat_out
+    integer, intent(in),        optional    :: verbose
 
-  !#######################################################################
-  !<PUBLICROUTINE INTERFACE="horiz_interp_conserve_new">
-  subroutine horiz_interp_conserve_new_1dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, verbose)
-    type(horiz_interp_type), intent(inout) :: Interp
-    real, intent(in),       dimension(:)   :: lon_in , lat_in
-    real, intent(in),       dimension(:)   :: lon_out, lat_out
-    integer, intent(in),       optional    :: verbose
-
-  !</PUBLICROUTINE>
-    !-----------------------------------------------------------------------
     real, dimension(size(lat_out(:))-1,2) :: sph
     real, dimension(size(lon_out(:))-1,2) :: theta
     real, dimension(size(lat_in(:)))      :: slat_in
@@ -164,16 +158,16 @@ contains
     character(len=64) :: mesg
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_1dx1d: horiz_interp_conserve_init is not called')
+         'horiz_interp_conservative_new_1dx1d: horiz_interp_conservative_init is not called')
 
     if(great_circle_algorithm) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_1dx1d: great_circle_algorithm is not implemented, contact developer')
-    !-----------------------------------------------------------------------
+         'horiz_interp_conservative_new_1dx1d: great_circle_algorithm is not implemented, contact developer')
+
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
     pe      = mpp_pe()
     root_pe = mpp_root_pe()
-    !-----------------------------------------------------------------------
+
     hpi = 0.5*pi
     tpi = 4.*hpi
     Interp%version = 1
@@ -185,7 +179,6 @@ contains
                Interp % area_src (nlon_in, nlat_in),   &
                Interp % area_dst (nlon_out, nlat_out) )
 
-    !-----------------------------------------------------------------------
     !  --- set-up for input grid boxes ---
 
     do j = 1, nlat_in+1
@@ -204,7 +197,6 @@ contains
     s2n = .true.
     if (lat_in(1) > lat_in(nlat_in+1)) s2n = .false.
 
-    !-----------------------------------------------------------------------
     !  --- set-up for output grid boxes ---
 
     do n = 1, nlat_out
@@ -219,7 +211,6 @@ contains
 
     Interp%nlon_src = nlon_in;  Interp%nlat_src = nlat_in
     Interp%nlon_dst = nlon_out; Interp%nlat_dst = nlat_out
-    !***********************************************************************
 
     !------ set up latitudinal indexing ------
     !------ make sure output grid goes south to north ------
@@ -246,7 +237,7 @@ contains
                      (.not.s2n .and. (slat_in(j+1)-sph(n,n2)) <= eps .and.  &
                      (sph(n,n2)-slat_in(j)) <= eps) ) then
                    Interp%jlat(n,n2) = j
-                   ! weight with sin(lat) to exactly conserve area-integral
+                   ! weight with sin(lat) to exactly conservative area-integral
                    fac = (sph(n,n2)-slat_in(j))/(slat_in(j+1)-slat_in(j))
                    if (s2n) then
                       if (n2 == 1) Interp%facj(n,n2) = 1.0 - fac
@@ -267,7 +258,7 @@ contains
           if ( Interp%jlat(n,n2) == 0 ) then
              write (mesg,710) n,sph(n,n2)
 710          format (': n,sph=',i3,f14.7,40x)
-             call mpp_error(FATAL, 'horiz_interp_conserve_mod:no latitude index found'//trim(mesg))
+             call mpp_error(FATAL, 'horiz_interp_conservative_mod:no latitude index found'//trim(mesg))
           endif
        enddo
     enddo
@@ -302,7 +293,7 @@ contains
           if ( Interp%ilon(m,m2) == 0 ) then
              print *, 'lon_out,blon,blon_in,eps=',  &
                   theta(m,m2),blon,lon_in(1),lon_in(nlon_in+1),eps
-             call mpp_error(FATAL, 'horiz_interp_conserve_mod: no longitude index found')
+             call mpp_error(FATAL, 'horiz_interp_conservative_mod: no longitude index found')
           endif
        enddo
     enddo
@@ -323,7 +314,6 @@ contains
        enddo
     enddo
 
-    !-----------------------------------------------------------------------
     ! this output may be quite lengthy and is not recommended
     ! when using more than one processor
     if (iverbose > 2) then
@@ -336,22 +326,17 @@ contains
 802    format (/,2x,'j',4x,'js',5x,'je',4x,'facjs',4x,'facje',  &
             /,(i4,2i7,2f10.5))
     endif
-    !-----------------------------------------------------------------------
 
-  end subroutine horiz_interp_conserve_new_1dx1d
+  end subroutine horiz_interp_conservative_new_1dx1d
 
-  !#######################################################################
-  !<PUBLICROUTINE INTERFACE="horiz_interp_conserve_new">
-  subroutine horiz_interp_conserve_new_1dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine horiz_interp_conservative_new_1dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(horiz_interp_type),        intent(inout) :: Interp
+    type(conservative1HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:)   :: lon_in , lat_in
     real, intent(in),              dimension(:,:) :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
     real, intent(inout), optional, dimension(:,:) :: mask_out
     integer, intent(in), optional                 :: verbose
-
-  !</PUBLICROUTINE>
 
     integer :: create_xgrid_1DX2D_order1, get_maxxgrid, maxxgrid
     integer :: create_xgrid_great_circle
@@ -371,21 +356,21 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_1dx2d: horiz_interp_conserve_init is not called')
+         'horiz_interp_conservative_new_1dx2d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1), one_byte))
     if(wordsz .NE. 4 .AND. wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_1dx2d: wordsz should be 4 or 8')
+         'horiz_interp_conservative_new_1dx2d: wordsz should be 4 or 8')
 
     if( (size(lon_out,1) .NE. size(lat_out,1)) .OR. (size(lon_out,2) .NE. size(lat_out,2)) )  &
-        call mpp_error(FATAL, 'horiz_interp_conserve_mod: size mismatch between lon_out and lat_out')
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_out and lat_out')
     nlon_in  = size(lon_in(:)) - 1;  nlat_in  = size(lat_in(:)) - 1
     nlon_out = size(lon_out,1) - 1;  nlat_out = size(lon_out,2) - 1
 
     mask_src = 1.
     if(present(mask_in)) then
        if( (size(mask_in,1) .NE. nlon_in) .OR.  (size(mask_in,2) .NE. nlat_in)) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_in and lon_in/lat_in')
+         'horiz_interp_conservative_mod: size mismatch between mask_in and lon_in/lat_in')
        mask_src = mask_in
     end if
 
@@ -409,7 +394,7 @@ contains
     else if(ndecrease == nlat_in) then
        flip_lat = .true.
     else
-       call mpp_error(FATAL, 'horiz_interp_conserve_mod: nlat_in should be equal to nincrease or ndecrease')
+       call mpp_error(FATAL, 'horiz_interp_conservative_mod: nlat_in should be equal to nincrease or ndecrease')
     endif
 
     if(wordsz==4) then
@@ -519,7 +504,7 @@ contains
     Interp%nlon_dst = nlon_out; Interp%nlat_dst = nlat_out
     if(present(mask_out)) then
        if( (size(mask_out,1) .NE. nlon_out) .OR. (size(mask_out,2) .NE. nlat_out) ) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_out and lon_out/lat_out')
+         'horiz_interp_conservative_mod: size mismatch between mask_out and lon_out/lat_out')
        mask_out = 0.0
        do i = 1, nxgrid
           mask_out(Interp%i_dst(i),Interp%j_dst(i)) = mask_out(Interp%i_dst(i),Interp%j_dst(i)) + Interp%area_frac_dst(i)
@@ -528,20 +513,16 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area )
 
-  end subroutine horiz_interp_conserve_new_1dx2d
+  end subroutine horiz_interp_conservative_new_1dx2d
 
-  !#######################################################################
-  !<PUBLICROUTINE INTERFACE="horiz_interp_conserve_new">
-  subroutine horiz_interp_conserve_new_2dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine horiz_interp_conservative_new_2dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(horiz_interp_type),        intent(inout) :: Interp
+    type(conservative1HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
     real, intent(in),              dimension(:)   :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
     real, intent(inout), optional, dimension(:,:) :: mask_out
     integer, intent(in), optional                 :: verbose
-
-  !</PUBLICROUTINE>
 
     integer :: create_xgrid_2DX1D_order1, get_maxxgrid, maxxgrid
     integer :: create_xgrid_great_circle
@@ -554,21 +535,21 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_2dx1d: horiz_interp_conserve_init is not called')
+         'horiz_interp_conservative_new_2dx1d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1,1), one_byte))
     if(wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_2dx1d: currently only support 64-bit real, contact developer')
+         'horiz_interp_conservative_new_2dx1d: currently only support 64-bit real, contact developer')
 
     if( (size(lon_in,1) .NE. size(lat_in,1)) .OR. (size(lon_in,2) .NE. size(lat_in,2)) )  &
-        call mpp_error(FATAL, 'horiz_interp_conserve_mod: size mismatch between lon_in and lat_in')
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_in and lat_in')
     nlon_in  = size(lon_in,1)   - 1;  nlat_in  = size(lon_in,2)   - 1
     nlon_out = size(lon_out(:)) - 1;  nlat_out = size(lat_out(:)) - 1
 
     mask_src = 1.
     if(present(mask_in)) then
        if( (size(mask_in,1) .NE. nlon_in) .OR.  (size(mask_in,2) .NE. nlat_in)) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_in and lon_in/lat_in')
+         'horiz_interp_conservative_mod: size mismatch between mask_in and lon_in/lat_in')
        mask_src = mask_in
     end if
 
@@ -615,7 +596,7 @@ contains
     Interp%nlon_dst = nlon_out; Interp%nlat_dst = nlat_out
     if(present(mask_out)) then
        if( (size(mask_out,1) .NE. nlon_out) .OR. (size(mask_out,2) .NE. nlat_out) ) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_out and lon_out/lat_out')
+         'horiz_interp_conservative_mod: size mismatch between mask_out and lon_out/lat_out')
        mask_out = 0.0
        do i = 1, nxgrid
           mask_out(Interp%i_dst(i),Interp%j_dst(i)) = mask_out(Interp%i_dst(i),Interp%j_dst(i)) + Interp%area_frac_dst(i)
@@ -624,19 +605,16 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area)
 
-  end subroutine horiz_interp_conserve_new_2dx1d
+  end subroutine horiz_interp_conservative_new_2dx1d
 
-  !#######################################################################
-  !<PUBLICROUTINE INTERFACE="horiz_interp_conserve_new">
-  subroutine horiz_interp_conserve_new_2dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine horiz_interp_conservative_new_2dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(horiz_interp_type),        intent(inout) :: Interp
+    type(conservative1HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
     real, intent(in),              dimension(:,:) :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
     real, intent(inout), optional, dimension(:,:) :: mask_out
     integer, intent(in), optional                 :: verbose
-  !</PUBLICROUTINE>
 
     integer :: create_xgrid_2DX2D_order1, get_maxxgrid, maxxgrid
     integer :: create_xgrid_great_circle
@@ -651,23 +629,23 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_2dx2d: horiz_interp_conserve_init is not called')
+         'horiz_interp_conservative_new_2dx2d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1,1), one_byte))
     if(wordsz .NE. 4 .AND. wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conserve_new_2dx2d: wordsz should be 4 or 8')
+         'horiz_interp_conservative_new_2dx2d: wordsz should be 4 or 8')
 
     if( (size(lon_in,1) .NE. size(lat_in,1)) .OR. (size(lon_in,2) .NE. size(lat_in,2)) )  &
-        call mpp_error(FATAL, 'horiz_interp_conserve_mod: size mismatch between lon_in and lat_in')
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_in and lat_in')
     if( (size(lon_out,1) .NE. size(lat_out,1)) .OR. (size(lon_out,2) .NE. size(lat_out,2)) )  &
-        call mpp_error(FATAL, 'horiz_interp_conserve_mod: size mismatch between lon_out and lat_out')
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_out and lat_out')
     nlon_in  = size(lon_in,1)  - 1;  nlat_in  = size(lon_in,2)  - 1
     nlon_out = size(lon_out,1) - 1;  nlat_out = size(lon_out,2) - 1
 
     mask_src = 1.
     if(present(mask_in)) then
        if( (size(mask_in,1) .NE. nlon_in) .OR.  (size(mask_in,2) .NE. nlat_in)) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_in and lon_in/lat_in')
+         'horiz_interp_conservative_mod: size mismatch between mask_in and lon_in/lat_in')
        mask_src = mask_in
     end if
 
@@ -732,7 +710,7 @@ contains
     Interp%nlon_dst = nlon_out; Interp%nlat_dst = nlat_out
     if(present(mask_out)) then
        if( (size(mask_out,1) .NE. nlon_out) .OR. (size(mask_out,2) .NE. nlat_out) ) call mpp_error(FATAL, &
-         'horiz_interp_conserve_mod: size mismatch between mask_out and lon_out/lat_out')
+         'horiz_interp_conservative_mod: size mismatch between mask_out and lon_out/lat_out')
        mask_out = 0.0
        do i = 1, nxgrid
           mask_out(Interp%i_dst(i),Interp%j_dst(i)) = mask_out(Interp%i_dst(i),Interp%j_dst(i)) + Interp%area_frac_dst(i)
@@ -741,20 +719,20 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area )
 
-  end subroutine horiz_interp_conserve_new_2dx2d
+  end subroutine horiz_interp_conservative_new_2dx2d
 
   !########################################################################
-  ! <SUBROUTINE NAME="horiz_interp_conserve">
+  ! <SUBROUTINE NAME="horiz_interp_conservative">
 
   !   <OVERVIEW>
   !      Subroutine for performing the horizontal interpolation between two grids.
   !   </OVERVIEW>
   !   <DESCRIPTION>
   !     Subroutine for performing the horizontal interpolation between two grids.
-  !     horiz_interp_conserve_new must be called before calling this routine.
+  !     horiz_interp_conservative_new must be called before calling this routine.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_conserve ( Interp, data_in, data_out, verbose, mask_in, mask_out)
+  !     call horiz_interp_conservative ( Interp, data_in, data_out, verbose, mask_in, mask_out)
   !   </TEMPLATE>
   !
   !   <IN NAME="Interp" TYPE="type(horiz_interp_type)">
@@ -773,8 +751,8 @@ contains
   !      Input mask, must be the same size as the input data. The real value of
   !      mask_in must be in the range (0.,1.). Set mask_in=0.0 for data points
   !      that should not be used or have missing data. mask_in will be applied only
-  !      when horiz_interp_conserve_new_1d is called. mask_in will be passed into
-  !      horiz_interp_conserve_new_2d.
+  !      when horiz_interp_conservative_new_1d is called. mask_in will be passed into
+  !      horiz_interp_conservative_new_2d.
   !   </IN>
 
   !   <OUT NAME="data_out" TYPE="real, dimension(:,:)">
@@ -782,57 +760,37 @@ contains
   !   </OUT>
   !   <OUT NAME="mask_out" TYPE="real, dimension(:,:),optional">
   !      Output mask that specifies whether data was computed. mask_out will be computed only
-  !      when horiz_interp_conserve_new_1d is called. mask_out will be computed in
-  !      horiz_interp_conserve_new_2d.
+  !      when horiz_interp_conservative_new_1d is called. mask_out will be computed in
+  !      horiz_interp_conservative_new_2d.
   !   </OUT>
-
-  subroutine horiz_interp_conserve ( Interp, data_in, data_out, verbose, &
-       mask_in, mask_out)
-    !-----------------------------------------------------------------------
-    type (horiz_interp_type), intent(in) :: Interp
-    real, intent(in),  dimension(:,:) :: data_in
-    real, intent(out), dimension(:,:) :: data_out
-    integer, intent(in),                   optional :: verbose
-    real, intent(in),   dimension(:,:), optional :: mask_in
-    real, intent(out),  dimension(:,:), optional :: mask_out
-
-    !  --- error checking ---
-    if (size(data_in,1) /= Interp%nlon_src .or. size(data_in,2) /= Interp%nlat_src) &
-         call mpp_error(FATAL, 'horiz_interp_conserve_mod: size of input array incorrect')
-
-    if (size(data_out,1) /= Interp%nlon_dst .or. size(data_out,2) /= Interp%nlat_dst) &
-         call mpp_error(FATAL, 'horiz_interp_conserve_mod: size of output array incorrect')
-
-    select case ( Interp%version)
-    case (1)
-       call horiz_interp_conserve_version1(Interp, data_in, data_out, verbose, mask_in, mask_out)
-    case (2)
-       if(present(mask_in) .OR. present(mask_out) ) call mpp_error(FATAL,  &
-            'horiz_interp_conserve: for version 2, mask_in and mask_out must be passed in horiz_interp_new, not in horiz_interp')
-       call horiz_interp_conserve_version2(Interp, data_in, data_out, verbose)
-    end select
-
-  end subroutine horiz_interp_conserve
   ! </SUBROUTINE>
 
   !##############################################################################
-  subroutine horiz_interp_conserve_version1 ( Interp, data_in, data_out, verbose, &
+  subroutine horiz_interp_conservative_version1 ( Interp, data_in, data_out, verbose, &
        mask_in, mask_out)
-    !-----------------------------------------------------------------------
-    type (horiz_interp_type), intent(in) :: Interp
+
+    type (conservative1HZI_t), intent(in) :: Interp
     real, intent(in),  dimension(:,:) :: data_in
     real, intent(out), dimension(:,:) :: data_out
     integer, intent(in),                   optional :: verbose
     real, intent(in),   dimension(:,:), optional :: mask_in
     real, intent(out),  dimension(:,:), optional :: mask_out
-    !----------local variables----------------------------------------------------
+
     integer :: m, n, nlon_in, nlat_in, nlon_out, nlat_out,   &
          miss_in, miss_out, is, ie, js, je,   &
          np, npass, iverbose
     real    :: dsum, wsum, avg_in, min_in, max_in,   &
          avg_out, min_out, max_out, eps, asum,   &
          dwtsum, wtsum, arsum, fis, fie, fjs, fje
-    !-----------------------------------------------------------------------
+
+    !  --- error checking ---
+    if (size(data_in,1) /= Interp%nlon_src .or. size(data_in,2) /= Interp%nlat_src) &
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size of input array incorrect')
+
+    if (size(data_out,1) /= Interp%nlon_dst .or. size(data_out,2) /= Interp%nlat_dst) &
+        call mpp_error(FATAL, 'horiz_interp_conservative_mod: size of output array incorrect')
+
+
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
     eps = epsilon(wtsum)
@@ -842,10 +800,9 @@ contains
 
     if (present(mask_in)) then
        if ( count(mask_in < -.0001 .or. mask_in > 1.0001) > 0 ) &
-            call mpp_error(FATAL, 'horiz_interp_conserve_mod: input mask not between 0,1')
+            call mpp_error(FATAL, 'horiz_interp_conservative_mod: input mask not between 0,1')
     endif
 
-    !-----------------------------------------------------------------------
     !---- loop through output grid boxes ----
 
     data_out = 0.0
@@ -910,10 +867,7 @@ contains
        enddo
     enddo
 
-    !***********************************************************************
     ! compute statistics: minimum, maximum, and mean
-    !-----------------------------------------------------------------------
-
     if (iverbose > 0) then
 
        ! compute statistics of input data
@@ -960,17 +914,21 @@ contains
 
     endif
 
-    !-----------------------------------------------------------------------
-  end subroutine horiz_interp_conserve_version1
+  end subroutine horiz_interp_conservative_version1
 
-  !#############################################################################
-  subroutine horiz_interp_conserve_version2 ( Interp, data_in, data_out, verbose )
-    !-----------------------------------------------------------------------
-    type (horiz_interp_type), intent(in) :: Interp
+  subroutine horiz_interp_conservative_version2 ( Interp, data_in, data_out, verbose )
+    type (conservative2HZI_t), intent(in) :: Interp
     real,    intent(in),  dimension(:,:) :: data_in
     real,    intent(out), dimension(:,:) :: data_out
     integer, intent(in),        optional :: verbose
     integer :: i, i_src, j_src, i_dst, j_dst
+
+    !  --- error checking ---
+    if (size(data_in,1) /= Interp%nlon_src .or. size(data_in,2) /= Interp%nlat_src) &
+         call mpp_error(FATAL, 'horiz_interp_conservative_mod: size of input array incorrect')
+
+    if (size(data_out,1) /= Interp%nlon_dst .or. size(data_out,2) /= Interp%nlat_dst) &
+         call mpp_error(FATAL, 'horiz_interp_conservative_mod: size of output array incorrect')
 
     data_out = 0.0
     do i = 1, Interp%nxgrid
@@ -979,54 +937,31 @@ contains
        data_out(i_dst, j_dst) = data_out(i_dst, j_dst) + data_in(i_src,j_src)*Interp%area_frac_dst(i)
     end do
 
-  end subroutine horiz_interp_conserve_version2
+  end subroutine horiz_interp_conservative_version2
 
-  !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_conserve_del">
+   subroutine hzi_delete_conservative1 ( Interp )
+      type (conservative1HZI_t), intent(inout) :: Interp
 
-  !   <OVERVIEW>
-  !     Deallocates memory used by "horiz_interp_type" variables.
-  !     Must be called before reinitializing with horiz_interp_new.
-  !   </OVERVIEW>
-  !   <DESCRIPTION>
-  !     Deallocates memory used by "horiz_interp_type" variables.
-  !     Must be called before reinitializing with horiz_interp_new.
-  !   </DESCRIPTION>
-  !   <TEMPLATE>
-  !     call horiz_interp_conserve_del ( Interp )
-  !   </TEMPLATE>
+      if(associated(Interp%area_src)) deallocate(Interp%area_src)
+      if(associated(Interp%area_dst)) deallocate(Interp%area_dst)
+      if(associated(Interp%facj))     deallocate(Interp%facj)
+      if(associated(Interp%jlat))     deallocate(Interp%jlat)
+      if(associated(Interp%faci))     deallocate(Interp%faci)
+      if(associated(Interp%ilon))     deallocate(Interp%ilon)
 
-  !   <INOUT NAME="Interp" TYPE="horiz_interp_type">
-  !     A derived-type variable returned by previous call
-  !     to horiz_interp_new. The input variable must have
-  !     allocated arrays. The returned variable will contain
-  !     deallocated arrays.
-  !   </INOUT>
+   end subroutine hzi_delete_conservative1
 
-  subroutine horiz_interp_conserve_del ( Interp )
+   subroutine hzi_delete_conservative2 ( Interp )
+      type (conservative2HZI_t), intent(inout) :: Interp
 
-    type (horiz_interp_type), intent(inout) :: Interp
+      if(associated(Interp%i_src)) deallocate(Interp%i_src)
+      if(associated(Interp%j_src)) deallocate(Interp%j_src)
+      if(associated(Interp%i_dst)) deallocate(Interp%i_dst)
+      if(associated(Interp%j_dst)) deallocate(Interp%j_dst)
+      if(associated(Interp%area_frac_dst)) deallocate(Interp%area_frac_dst)
 
-    select case(Interp%version)
-    case (1)
-       if(associated(Interp%area_src)) deallocate(Interp%area_src)
-       if(associated(Interp%area_dst)) deallocate(Interp%area_dst)
-       if(associated(Interp%facj))     deallocate(Interp%facj)
-       if(associated(Interp%jlat))     deallocate(Interp%jlat)
-       if(associated(Interp%faci))     deallocate(Interp%faci)
-       if(associated(Interp%ilon))     deallocate(Interp%ilon)
-    case (2)
-       if(associated(Interp%i_src)) deallocate(Interp%i_src)
-       if(associated(Interp%j_src)) deallocate(Interp%j_src)
-       if(associated(Interp%i_dst)) deallocate(Interp%i_dst)
-       if(associated(Interp%j_dst)) deallocate(Interp%j_dst)
-       if(associated(Interp%area_frac_dst)) deallocate(Interp%area_frac_dst)
-    end select
+   end subroutine hzi_delete_conservative2
 
-  end subroutine horiz_interp_conserve_del
-  ! </SUBROUTINE>
-
-  !#######################################################################
   !---This statistics is for conservative scheme
   subroutine stats ( dat, area, asum, dsum, wsum, low, high, miss, mask )
     real,    intent(in)  :: dat(:,:), area(:,:)
@@ -1090,13 +1025,10 @@ contains
 
   end subroutine stats
 
-  !#######################################################################
-
   subroutine data_sum( data, area, facis, facie, facjs, facje,  &
        dwtsum, wtsum, arsum, mask )
 
     !  sums up the data and weights for a single output grid box
-    !-----------------------------------------------------------------------
     real, intent(in), dimension(:,:) :: data, area
     real, intent(in)                 :: facis, facie, facjs, facje
     real, intent(inout)              :: dwtsum, wtsum, arsum
@@ -1107,11 +1039,9 @@ contains
     !  dwtsum = sum(data*area*mask)
     !  wtsum  = sum(area*mask)
     !  arsum  = sum(area)
-    !-----------------------------------------------------------------------
     real, dimension(size(area,1),size(area,2)) :: wt
     real    :: asum
     integer :: id, jd
-    !-----------------------------------------------------------------------
 
     id=size(area,1); jd=size(area,2)
 
@@ -1132,11 +1062,8 @@ contains
        dwtsum = dwtsum + sum(wt*data)
        wtsum =  wtsum + asum
     endif
-    !-----------------------------------------------------------------------
 
   end subroutine data_sum
 
 
-  !#######################################################################
-
-end module horiz_interp_conserve_mod
+end module horizontal_interpolator_conservative_mod

@@ -16,7 +16,7 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-module horiz_interp_spherical_mod
+module horizontal_interpolator_spherical_mod
 
   ! <CONTACT EMAIL="Matthew.Harrison@noaa.gov"> Matthew Harrison </CONTACT>
   ! <CONTACT EMAIL="Zhi.Liang@noaa.gov"> Zhi Liang </CONTACT>
@@ -41,13 +41,14 @@ module horiz_interp_spherical_mod
   use fms_mod,               only : write_version_number
   use fms_mod,               only : check_nml_error
   use constants_mod,         only : pi
-  use horiz_interp_type_mod, only : horiz_interp_type, stats
+  use horizontal_interpolator_types_mod, only : sphericalHZI_t
+  use horizontal_interpolator_stats_mod, only : stats
 
   implicit none
   private
 
 
-  public :: horiz_interp_spherical_new, horiz_interp_spherical, horiz_interp_spherical_del
+  public :: horiz_interp_spherical_new, horiz_interp_spherical, hzi_delete_spherical
   public :: horiz_interp_spherical_init, horiz_interp_spherical_wght
 
   integer, parameter :: max_neighbors = 400
@@ -77,21 +78,11 @@ module horiz_interp_spherical_mod
   character(len=32) :: search_method = "radial_search" ! or "full_search"
   namelist /horiz_interp_spherical_nml/ search_method
 
-  !-----------------------------------------------------------------------
   ! Include variable "version" to be written to log file.
 #include<file_version.h>
   logical            :: module_is_initialized = .FALSE.
 
 contains
-
-  !#######################################################################
-  !  <SUBROUTINE NAME="horiz_interp_spherical_init">
-  !  <OVERVIEW>
-  !     writes version number to logfile.out
-  !  </OVERVIEW>
-  !  <DESCRIPTION>
-  !     writes version number to logfile.out
-  !  </DESCRIPTION>
 
   subroutine horiz_interp_spherical_init
     integer :: unit, ierr, io
@@ -102,11 +93,9 @@ contains
     read (input_nml_file, horiz_interp_spherical_nml, iostat=io)
     ierr = check_nml_error(io,'horiz_interp_spherical_nml')
 
- module_is_initialized = .true.
+    module_is_initialized = .true.
 
-
-
-end subroutine horiz_interp_spherical_init
+   end subroutine horiz_interp_spherical_init
 
   !  </SUBROUTINE>
 
@@ -171,7 +160,6 @@ end subroutine horiz_interp_spherical_init
     real, optional,             intent(in) :: max_dist
     logical,          intent(in), optional :: src_modulo
 
-    !------local variables ---------------------------------------
     integer :: i, j, n
     integer :: map_dst_xsize, map_dst_ysize, map_src_xsize, map_src_ysize
     integer :: map_src_size, num_neighbors
@@ -185,8 +173,6 @@ end subroutine horiz_interp_spherical_init
     integer :: ilon(max_neighbors), jlat(max_neighbors)
     real, dimension(size(lon_out,1),size(lon_out,2)) :: theta_dst, phi_dst
     real, dimension(size(lon_in,1)*size(lon_in,2))   :: theta_src, phi_src
-
-    !--------------------------------------------------------------
 
     pe      = mpp_pe()
     root_pe = mpp_root_pe()
@@ -365,14 +351,12 @@ end subroutine horiz_interp_spherical_init
     real, intent(out), dimension(:,:), optional :: mask_out
     real, intent(in),                  optional :: missing_value
 
-    !--- some local variables ----------------------------------------
     real, dimension(Interp%nlon_dst, Interp%nlat_dst,size(Interp%src_dist,3)) :: wt
     real, dimension(Interp%nlon_src, Interp%nlat_src) :: mask_src
     real, dimension(Interp%nlon_dst, Interp%nlat_dst) :: mask_dst
     integer :: nlon_in, nlat_in, nlon_out, nlat_out, num_found
     integer :: m, n, i, j, k, miss_in, miss_out, i1, i2, j1, j2, iverbose
     real    :: min_in, max_in, avg_in, min_out, max_out, avg_out, sum
-    !-----------------------------------------------------------------
 
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
@@ -458,10 +442,7 @@ end subroutine horiz_interp_spherical_init
 
     if(present(mask_out)) mask_out = mask_dst
 
-    !***********************************************************************
     ! compute statistics: minimum, maximum, and mean
-    !-----------------------------------------------------------------------
-
     if (iverbose > 0) then
 
        ! compute statistics of input data
@@ -490,8 +471,6 @@ end subroutine horiz_interp_spherical_init
     return
   end subroutine horiz_interp_spherical
 
-  ! </SUBROUTINE>
-  !#######################################################################
   subroutine horiz_interp_spherical_wght( Interp, wt, verbose, mask_in, mask_out, missing_value)
     type (horiz_interp_type), intent(in)        :: Interp
     real, intent(out), dimension(:,:,:)         :: wt
@@ -500,13 +479,11 @@ end subroutine horiz_interp_spherical_init
     real, intent(inout), dimension(:,:), optional :: mask_out
     real, intent(in),                  optional :: missing_value
 
-    !--- some local variables ----------------------------------------
     real, dimension(Interp%nlon_src, Interp%nlat_src) :: mask_src
     real, dimension(Interp%nlon_dst, Interp%nlat_dst) :: mask_dst
     integer :: nlon_in, nlat_in, nlon_out, nlat_out, num_found
     integer :: m, n, i, j, k, miss_in, miss_out, i1, i2, j1, j2, iverbose
     real    :: min_in, max_in, avg_in, min_out, max_out, avg_out, sum
-    !-----------------------------------------------------------------
 
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
@@ -596,21 +573,16 @@ end subroutine horiz_interp_spherical_init
   !     allocated arrays. The returned variable will contain
   !     deallocated arrays.
   !   </INOUT>
+  subroutine hzi_delete_spherical( Interp )
 
-
-  subroutine horiz_interp_spherical_del( Interp )
-
-    type (horiz_interp_type), intent(inout) :: Interp
+    type (sphericalHZI_t), intent(inout) :: Interp
 
     if(associated(Interp%src_dist))  deallocate(Interp%src_dist)
     if(associated(Interp%num_found)) deallocate(Interp%num_found)
     if(associated(Interp%i_lon))     deallocate(Interp%i_lon)
     if(associated(Interp%j_lat))     deallocate(Interp%j_lat)
 
-  end subroutine horiz_interp_spherical_del
-  ! </SUBROUTINE>
-
-  !#######################################################################
+  end subroutine hzi_delete_spherical
 
 
   subroutine radial_search(theta_src,phi_src,theta_dst,phi_dst, map_src_xsize, map_src_ysize, &
@@ -625,7 +597,6 @@ end subroutine horiz_interp_spherical_init
     real,    intent(in)                    :: max_src_dist
     logical, intent(in)                    :: src_is_modulo
 
-    !---------- local variables ----------------------------------------
     integer, parameter :: max_nbrs = 50
     integer :: i, j, jj, i0, j0, n, l,i_left, i_right
     integer :: map_dst_xsize, map_dst_ysize
@@ -633,7 +604,7 @@ end subroutine horiz_interp_spherical_init
     integer :: map_src_size, step, step_size, bound, bound_start, bound_end
     logical :: continue_search, result, continue_radial_search
     real    :: d, res
-    !------------------------------------------------------------------
+
     map_dst_xsize=size(theta_dst,1);map_dst_ysize=size(theta_dst,2)
     map_src_size = map_src_xsize*map_src_ysize
 
@@ -830,9 +801,6 @@ end subroutine horiz_interp_spherical_init
 
   end subroutine radial_search
 
-
-  !#####################################################################
-
   function update_dest_neighbors(map_src_add, map_src_dist, src_add,d, num_found, min_nbrs)
 
     integer, intent(inout), dimension(:) :: map_src_add
@@ -962,9 +930,6 @@ end subroutine horiz_interp_spherical_init
 
   end function spherical_distance
 
-
-  !#######################################################################
-
   subroutine full_search(theta_src,phi_src,theta_dst,phi_dst,map_src_add, map_src_dist,num_found, &
                          num_neighbors,max_src_dist)
     real,    intent(in),    dimension(:)   :: theta_src, phi_src
@@ -997,7 +962,4 @@ end subroutine horiz_interp_spherical_init
 
   end subroutine full_search
 
-  !#######################################################################
-
-
-end module horiz_interp_spherical_mod
+end module horizontal_interpolator_spherical_mod

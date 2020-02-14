@@ -1,4 +1,4 @@
-module horiz_interp_stats_mod
+module horizontal_interpolator_stats_mod
 
     use mpp_mod, only : mpp_send, mpp_recv, mpp_sync_self
     use mpp_mod, only : mpp_pe, mpp_root_pe, mpp_npes
@@ -82,4 +82,4 @@ contains
     end subroutine stats
 
 
-end module horiz_interp_stats_mod
+end module horizontal_interpolator_stats_mod

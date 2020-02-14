@@ -16,7 +16,7 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-module horiz_interp_bilinear_mod
+module horizontal_interpolator_bilinear_mod
 
   ! <CONTACT EMAIL="Zhi.Liang@noaa.gov"> Zhi Liang </CONTACT>
 
@@ -37,40 +37,31 @@ module horiz_interp_bilinear_mod
   use mpp_mod,               only: mpp_error, FATAL, stdout, mpp_pe, mpp_root_pe
   use fms_mod,               only: write_version_number
   use constants_mod,         only: PI
-  use horiz_interp_type_mod, only: horiz_interp_type, stats
+  use horizontal_interpolator_types_mod, only: bilinearHZI_t
+  use horizontal_interpolator_stats_mod, only : stats
 
   implicit none
   private
 
 
-  public :: horiz_interp_bilinear_new, horiz_interp_bilinear, horiz_interp_bilinear_del
+  public :: hzi_new_bilinear, horiz_interp_bilinear, hzi_delete_bilinear
   public :: horiz_interp_bilinear_init
 
   !--- public interface
-  interface horiz_interp_bilinear_new
-    module procedure horiz_interp_bilinear_new_1d
-    module procedure horiz_interp_bilinear_new_2d
+  interface hzi_new_bilinear
+    module procedure hzi_new_bilinear_1d
+    module procedure hzi_new_bilinear_2d
   end interface
 
 
   real, parameter :: epsln=1.e-10
   integer, parameter :: DUMMY = -999
 
-  !-----------------------------------------------------------------------
 ! Include variable "version" to be written to log file.
 #include<file_version.h>
   logical            :: module_is_initialized = .FALSE.
 
 contains
-
-  !#######################################################################
-  !  <SUBROUTINE NAME="horiz_interp_bilinear_init">
-  !  <OVERVIEW>
-  !     writes version number to logfile.out
-  !  </OVERVIEW>
-  !  <DESCRIPTION>
-  !     writes version number to logfile.out
-  !  </DESCRIPTION>
 
   subroutine horiz_interp_bilinear_init
 
@@ -80,14 +71,10 @@ contains
 
   end subroutine horiz_interp_bilinear_init
 
-  !  </SUBROUTINE>
 
-  !########################################################################
-
-  subroutine horiz_interp_bilinear_new_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_new_bilinear_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo )
 
-    !-----------------------------------------------------------------------
     type(horiz_interp_type), intent(inout) :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
@@ -115,13 +102,11 @@ contains
     max_lon = tpi
     ln_err = 0
     lt_err = 0
-    !-----------------------------------------------------------------------
 
     allocate ( Interp % wti (size(lon_out,1),size(lon_out,2),2),   &
                Interp % wtj (size(lon_out,1),size(lon_out,2),2),   &
                Interp % i_lon (size(lon_out,1),size(lon_out,2),2), &
                Interp % j_lat (size(lon_out,1),size(lon_out,2),2))
-    !-----------------------------------------------------------------------
 
     nlon_in = size(lon_in(:))  ; nlat_in = size(lat_in(:))
     nlon_out = size(lon_out, 1); nlat_out = size(lon_out, 2)
@@ -234,10 +219,10 @@ contains
 
     return
 
-  end subroutine horiz_interp_bilinear_new_1d
+  end subroutine hzi_new_bilinear_1d
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_bilinear_new">
+  ! <SUBROUTINE NAME="hzi_new_bilinear">
 
   !   <OVERVIEW>
   !      Initialization routine.
@@ -247,7 +232,7 @@ contains
   !      that contains pre-computed interpolation indices and weights.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_bilinear_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo )
+  !     call hzi_new_bilinear ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo )
 
   !   </TEMPLATE>
   !
@@ -282,10 +267,9 @@ contains
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
 
-  subroutine horiz_interp_bilinear_new_2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_new_bilinear_2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo, new_search, no_crash_when_not_found )
 
-    !-----------------------------------------------------------------------
     type(horiz_interp_type), intent(inout) :: Interp
     real, intent(in),  dimension(:,:)      :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
@@ -466,10 +450,8 @@ contains
        enddo
     enddo
 
-  end subroutine horiz_interp_bilinear_new_2d
-  ! </SUBROUTINE>
+  end subroutine hzi_new_bilinear_2d
 
-  !#######################################################################
   ! this routine will search the source grid to fine the grid box that encloses
   ! each destination grid.
   subroutine find_neighbor( Interp, lon_in, lat_in, lon_out, lat_out, src_modulo )
@@ -711,8 +693,6 @@ contains
 
   end subroutine find_neighbor
 
-  !#######################################################################
-  !
   ! The function will return true if the point x,y is inside a polygon, or
   ! NO if it is not.  If the point is exactly on the edge of a polygon,
   ! the function will return .true.
@@ -749,7 +729,6 @@ contains
 
   end function inside_polygon
 
-  !#######################################################################
   ! this routine will search the source grid to fine the grid box that encloses
   ! each destination grid.
   subroutine find_neighbor_new( Interp, lon_in, lat_in, lon_out, lat_out, src_modulo, no_crash )
@@ -953,14 +932,11 @@ contains
 
   end subroutine find_neighbor_new
 
-  !#######################################################################
   function intersect(x1, y1, x2, y2, x)
      real, intent(in) :: x1, y1, x2, y2, x
      real             :: intersect
 
      intersect = (y2-y1)*(x-x1)/(x2-x1) + y1
-
-  return
 
   end function intersect
 
@@ -972,7 +948,7 @@ contains
   !   </OVERVIEW>
   !   <DESCRIPTION>
   !     Subroutine for performing the horizontal interpolation between two grids.
-  !     horiz_interp_bilinear_new must be called before calling this routine.
+  !     hzi_new_bilinear must be called before calling this routine.
   !   </DESCRIPTION>
   !   <TEMPLATE>
   !     call horiz_interp_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, missing_value, missing_permit)
@@ -980,7 +956,7 @@ contains
   !
   !   <IN NAME="Interp" TYPE="type(horiz_interp_type)">
   !     Derived-type variable containing interpolation indices and weights.
-  !     Returned by a previous call to horiz_interp_bilinear_new.
+  !     Returned by a previous call to hzi_new_bilinear.
   !   </IN>
   !   <IN NAME="data_in" TYPE="real, dimension(:,:)">
   !      Input data on source grid.
@@ -1012,7 +988,7 @@ contains
 
   subroutine horiz_interp_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, &
        missing_value, missing_permit, new_handle_missing )
-    !-----------------------------------------------------------------------
+
     type (horiz_interp_type), intent(in)        :: Interp
     real, intent(in),  dimension(:,:)           :: data_in
     real, intent(out), dimension(:,:)           :: data_out
@@ -1022,7 +998,7 @@ contains
     real, intent(in),                  optional :: missing_value
     integer, intent(in),               optional :: missing_permit
     logical, intent(in),               optional :: new_handle_missing
-    !-----------------------------------------------------------------------
+
     integer :: nlon_in, nlat_in, nlon_out, nlat_out, n, m,         &
          is, ie, js, je, iverbose, max_missing, num_missing, &
          miss_in, miss_out, unit
@@ -1281,9 +1257,8 @@ contains
           enddo
        enddo
     endif
-    !***********************************************************************
+
     ! compute statistics: minimum, maximum, and mean
-    !-----------------------------------------------------------------------
     if (iverbose > 0) then
 
        ! compute statistics of input data
@@ -1311,18 +1286,16 @@ contains
     return
 
   end subroutine horiz_interp_bilinear
-  ! </SUBROUTINE>
 
-  !#######################################################################
   ! <SUBROUTINE NAME="horiz_interp_bilinear_del">
 
   !   <OVERVIEW>
   !     Deallocates memory used by "horiz_interp_type" variables.
-  !     Must be called before reinitializing with horiz_interp_bilinear_new.
+  !     Must be called before reinitializing with hzi_new_bilinear.
   !   </OVERVIEW>
   !   <DESCRIPTION>
   !     Deallocates memory used by "horiz_interp_type" variables.
-  !     Must be called before reinitializing with horiz_interp_bilinear_new.
+  !     Must be called before reinitializing with hzi_new_bilinear.
   !   </DESCRIPTION>
   !   <TEMPLATE>
   !     call horiz_interp_bilinear_del ( Interp )
@@ -1330,30 +1303,27 @@ contains
 
   !   <INOUT NAME="Interp" TYPE="horiz_interp_type">
   !     A derived-type variable returned by previous call
-  !     to horiz_interp_bilinear_new. The input variable must have
+  !     to hzi_new_bilinear. The input variable must have
   !     allocated arrays. The returned variable will contain
   !     deallocated arrays.
   !   </INOUT>
 
-  subroutine horiz_interp_bilinear_del( Interp )
+  subroutine hzi_delete_bilinear( Interp )
 
-    type (horiz_interp_type), intent(inout) :: Interp
+    type (bilinearHZI_t), intent(inout) :: Interp
 
     if(associated(Interp%wti))   deallocate(Interp%wti)
     if(associated(Interp%wtj))   deallocate(Interp%wtj)
     if(associated(Interp%i_lon)) deallocate(Interp%i_lon)
     if(associated(Interp%j_lat)) deallocate(Interp%j_lat)
 
-  end subroutine horiz_interp_bilinear_del
-  ! </SUBROUTINE>
-
-  !#######################################################################
+  end subroutine hzi_delete_bilinear
 
   function indp (value, array)
     integer                        :: indp
     real, dimension(:), intent(in) :: array
     real, intent(in)               :: value
-    !
+
     !=======================================================================
     !
     !     indp = index of nearest data point within "array" corresponding to
@@ -1372,7 +1342,7 @@ contains
     !
     integer i, ia, unit
     logical keep_going
-    !
+
     ia = size(array(:))
     do i=2,ia
        if (array(i) .lt. array(i-1)) then
@@ -1403,6 +1373,4 @@ contains
     return
   end function indp
 
-  !######################################################################
-
-end module horiz_interp_bilinear_mod
+end module horizontal_interpolator_bilinear_mod
