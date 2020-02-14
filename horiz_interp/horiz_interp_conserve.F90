@@ -95,13 +95,11 @@ module horizontal_interpolator_conservative_mod
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
-  interface horiz_interp_conservative_new
+
      module procedure horiz_interp_conservative_new_1dx1d
      module procedure horiz_interp_conservative_new_1dx2d
      module procedure horiz_interp_conservative_new_2dx1d
      module procedure horiz_interp_conservative_new_2dx2d
-  end interface
-  ! </INTERFACE>
 
 interface horiz_interp_conservative
    module procedure horiz_interp_conservative_version1
@@ -109,7 +107,10 @@ interface horiz_interp_conservative
 end interface
 
   public :: horiz_interp_conservative_init
-  public :: horiz_interp_conservative_new, horiz_interp_conservative, hzi_delete_conservative1, hzi_delete_conservative2
+  public :: horiz_interp_conservative_new_1dx1d, horiz_interp_conservative_new_1dx2d
+  public :: horiz_interp_conservative_new_2dx1d, horiz_interp_conservative_new_2dx2d
+  public :: horiz_interp_conservative
+  public :: hzi_delete_conservative1, hzi_delete_conservative2
 
   integer :: pe, root_pe
 
