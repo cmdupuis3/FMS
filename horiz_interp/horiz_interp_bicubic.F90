@@ -41,7 +41,7 @@ module horiz_interp_bicubic_mod
 !
 ! written by
 !       martin.schmidt@io-warnemuende.de (2004)
-! revied by
+! reviewed by
 !       martin.schmidt@io-warnemuende.de (2004)
 !
 ! Version 1.0.0.2005-07-06
@@ -449,7 +449,7 @@ module horiz_interp_bicubic_mod
 
   end subroutine horiz_interp_bicubic_new_1d
 
-  subroutine horiz_interp_bicubic( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit)
+  subroutine horiz_interp_bicubic( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
     type (horiz_interp_type), intent(in)        :: Interp
     real, intent(in),  dimension(:,:)           :: data_in
     real, intent(out), dimension(:,:)           :: data_out
@@ -457,7 +457,6 @@ module horiz_interp_bicubic_mod
     real, intent(in),  dimension(:,:), optional :: mask_in
     real, intent(out), dimension(:,:), optional :: mask_out
     real, intent(in),                  optional :: missing_value
-    integer, intent(in),               optional :: missing_permit
     real :: yz, ycu, ycl
     real :: xz, xcu, xcl
     real :: val, val1, val2

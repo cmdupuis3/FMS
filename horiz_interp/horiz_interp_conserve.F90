@@ -409,7 +409,7 @@ contains
     else if(ndecrease == nlat_in) then
        flip_lat = .true.
     else
-       call mpp_error(FATAL, 'horiz_interp_conserve_mod: nlat_in should be equal to nincreaase or ndecrease')
+       call mpp_error(FATAL, 'horiz_interp_conserve_mod: nlat_in should be equal to nincrease or ndecrease')
     endif
 
     if(wordsz==4) then

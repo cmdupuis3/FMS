@@ -16,197 +16,159 @@
 !* You should have received a copy of the GNU Lesser General Public
 !* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
 !***********************************************************************
-module horiz_interp_type_mod
-! <CONTACT EMAIL="Zhi.Liang@noaa.gov"> Zhi Liang </CONTACT>
+module horizontal_interpolator_types_mod
 
-! <HISTORY SRC="http://www.gfdl.noaa.gov/fms-cgi-bin/cvsweb.cgi/FMS/"/>
+    use mpp_mod, only : mpp_error, FATAL
 
-! <OVERVIEW>
-!     define derived data type that contains indices and weights used for subsequent
-!      interpolations.
-! </OVERVIEW>
+    implicit none
+    private
 
-! <DESCRIPTION>
-!     define derived data type that contains indices and weights used for subsequent
-!      interpolations.
-! </DESCRIPTION>
+    ! Oh, how I wish Fortran enums worked like in normal languages...
+    enum, bind(C)
+        enumerator CONSERVATIVE_1
+        enumerator CONSERVATIVE_2
+        enumerator BILINEAR
+        enumerator SPHERICAL
+        enumerator BICUBIC
+    end enum
 
+    type, abstract :: baseHZI_t
+        real,    dimension(:,:),   pointer :: area_src => NULL()        !< area of the source grid
+        real,    dimension(:,:),   pointer :: area_dst => NULL()        !< area of the destination grid
+        real,    dimension(:,:,:), pointer :: src_dist => NULL()        !< distance between destination grid and neighbor source grid.
+        logical, dimension(:,:),   pointer :: found_neighbors => NULL() !< indicate whether destination grid has some source grid around it.
+        real                               :: max_src_dist
+        integer, dimension(:,:),   pointer :: num_found => NULL()
+        integer                            :: nlon_src                  !< size of source grid
+        integer                            :: nlat_src                  !< size of source grid
+        integer                            :: nlon_dst                  !< size of destination grid
+        integer                            :: nlat_dst                  !< size of destination grid
+        real,    dimension(:,:),   pointer :: rat_x => NULL()           !< the ratio of coordinates of the dest grid (x_dest - x_src_r) / (x_src_l - x_src_r)
+        real,    dimension(:,:),   pointer :: rat_y => NULL()           !< the ratio of coordinates of the dest grid (y_dest - y_src_r) / (y_src_l - y_src_r)
+        real,    dimension(:),     pointer :: lon_in => NULL()          !< the coordinates of the source grid
+        real,    dimension(:),     pointer :: lat_in => NULL()          !< the coordinates of the source grid
+    end type baseHZI_t
 
-use mpp_mod, only : mpp_send, mpp_recv, mpp_sync_self, mpp_error, FATAL
-use mpp_mod, only : mpp_pe, mpp_root_pe, mpp_npes
-use mpp_mod, only : COMM_TAG_1, COMM_TAG_2
+    type, extends(baseHZI_t) :: conservative1HZI_t
+        real,    dimension(:,:), pointer :: faci => NULL()   !< weights
+        real,    dimension(:,:), pointer :: facj => NULL()   !< weights
+        integer, dimension(:,:), pointer :: ilon => NULL()   !< indices
+        integer, dimension(:,:), pointer :: jlat => NULL()   !< indices
+    end type conservative1HZI_t
 
-implicit none
-private
+    type, extends(conservative1HZI_t) :: conservative2HZI_t
+        integer                          :: nxgrid                  !< number of exchange grid between src and dst grid.
+        integer, dimension(:),   pointer :: i_src => NULL()         !< indices in source grid.
+        integer, dimension(:),   pointer :: j_src => NULL()         !< indices in source grid.
+        integer, dimension(:),   pointer :: i_dst => NULL()         !< indices in destination grid.
+        integer, dimension(:),   pointer :: j_dst => NULL()         !< indices in destination grid.
+        real,    dimension(:),   pointer :: area_frac_dst => NULL() !< area fraction in destination grid.
+        real,    dimension(:,:), pointer :: mask_in => NULL()
+    end type conservative2HZI_t
 
+    type, extends(baseHZI_t) :: bilinearHZI_t
+        real,  dimension(:,:,:), pointer :: wti => NULL() !< weights
+        real,  dimension(:,:,:), pointer :: wtj => NULL() !< weights
+    end type bilinearHZI_t
 
-! parameter to determine interpolation method
- integer, parameter :: CONSERVE = 1
- integer, parameter :: BILINEAR = 2
- integer, parameter :: SPHERICA = 3
- integer, parameter :: BICUBIC  = 4
+    type, extends(baseHZI_t) :: sphericalHZI_t
+    end type sphericalHZI_t
 
-public :: CONSERVE, BILINEAR, SPHERICA, BICUBIC
-public :: horiz_interp_type, stats, assignment(=)
+    type, extends(baseHZI_t) :: bicubicHZI_t
+        real,    dimension(:,:,:), pointer :: wti  => NULL() !< derivative weights
+        integer, dimension(:,:,:), pointer :: ilon => NULL() !< indices
+        integer, dimension(:,:,:), pointer :: jlat => NULL() !< indices
+    end type bicubicHZI_t
 
-interface assignment(=)
-  module procedure horiz_interp_type_eq
-end interface
+    interface assignment(=)
+        module procedure hzi_type_eq_conservative1
+        module procedure hzi_type_eq_conservative2
+        module procedure hzi_type_eq_bilinear
+        module procedure hzi_type_eq_spherical
+        module procedure hzi_type_eq_bicubic
+    end interface
 
-!<PUBLICTYPE >
- type horiz_interp_type
-   real,    dimension(:,:), pointer   :: faci =>NULL(), facj =>NULL()   !weights for conservative scheme
-   integer, dimension(:,:), pointer   :: ilon =>NULL(), jlat =>NULL()   !indices for conservative scheme
-   real,    dimension(:,:), pointer   :: area_src =>NULL()              !area of the source grid
-   real,    dimension(:,:), pointer   :: area_dst =>NULL()              !area of the destination grid
-   real,    dimension(:,:,:), pointer :: wti =>NULL(),wtj =>NULL()      !weights for bilinear interpolation
-                                                                        !wti ist used for derivative "weights" in bicubic
-   integer, dimension(:,:,:), pointer :: i_lon =>NULL(), j_lat =>NULL() !indices for bilinear interpolation
-                                                                        !and spherical regrid
-   real,    dimension(:,:,:), pointer :: src_dist =>NULL()              !distance between destination grid and
-                                                                        !neighbor source grid.
-   logical, dimension(:,:), pointer   :: found_neighbors =>NULL()       !indicate whether destination grid
-                                                                        !has some source grid around it.
-   real                               :: max_src_dist
-   integer, dimension(:,:), pointer   :: num_found => NULL()
-   integer                            :: nlon_src, nlat_src !size of source grid
-   integer                            :: nlon_dst, nlat_dst !size of destination grid
-   integer                            :: interp_method      !interpolation method.
-                                                            !=1, conservative scheme
-                                                            !=2, bilinear interpolation
-                                                            !=3, spherical regrid
-                                                            !=4, bicubic regrid
-   real,    dimension(:,:), pointer   :: rat_x =>NULL(), rat_y =>NULL() !the ratio of coordinates of the dest grid
-                                                                        ! (x_dest -x_src_r)/(x_src_l -x_src_r) and (y_dest -y_src_r)/(y_src_l -y_src_r)
-   real,    dimension(:), pointer     :: lon_in =>NULL(),  lat_in =>NULL()  !the coordinates of the source grid
-   logical                            :: I_am_initialized=.false.
-   integer                            :: version                            !indicate conservative interpolation version with value 1 or 2
-   !--- The following are for conservative interpolation scheme version 2 ( through xgrid)
-   integer                            :: nxgrid                             !number of exchange grid between src and dst grid.
-   integer, dimension(:), pointer     :: i_src=>NULL(), j_src=>NULL()       !indices in source grid.
-   integer, dimension(:), pointer     :: i_dst=>NULL(), j_dst=>NULL()       !indices in destination grid.
-   real,    dimension(:), pointer     :: area_frac_dst=>NULL()              !area fraction in destination grid.
-   real,    dimension(:,:), pointer   :: mask_in=>NULL()
- end type
-!</PUBLICTYPE>
+    public :: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
+    public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
+    public :: assignment(=)
 
 contains
 
-!#######################################################################
-!---This statistics is for bilinear interpolation and spherical regrid.
- subroutine stats ( dat, low, high, avg, miss, missing_value, mask )
- real,    intent(in)  :: dat(:,:)
- real,    intent(out) :: low, high, avg
- integer, intent(out) :: miss
- real, intent(in), optional :: missing_value
- real,    intent(in), optional :: mask(:,:)
+    subroutine hzi_type_eq(hzi_in, hzi_out)
+        type(baseHZI_t), intent(inout) :: hzi_out
+        type(baseHZI_t), intent(in)    :: hzi_in
 
- real :: dsum, npts, buffer_real(3)
- integer :: pe, root_pe, npes, p, buffer_int(2)
+        hzi_out%area_src        => hzi_in%area_src
+        hzi_out%area_dst        => hzi_in%area_dst
+        hzi_out%src_dist        => hzi_in%src_dist
+        hzi_out%found_neighbors => hzi_in%found_neighbors
+        hzi_out%max_src_dist    =  hzi_in%max_src_dist
+        hzi_out%num_found       => hzi_in%num_found
+        hzi_out%nlon_src        =  hzi_in%nlon_src
+        hzi_out%nlat_src        =  hzi_in%nlat_src
+        hzi_out%nlon_dst        =  hzi_in%nlon_dst
+        hzi_out%nlat_dst        =  hzi_in%nlat_dst
+        hzi_out%rat_x           => hzi_in%rat_x
+        hzi_out%rat_y           => hzi_in%rat_y
+        hzi_out%lon_in          => hzi_in%lon_in
+        hzi_out%lat_in          => hzi_in%lat_in
+    end subroutine hzi_type_eq
 
-   pe = mpp_pe()
-   root_pe = mpp_root_pe()
-   npes = mpp_npes()
+    subroutine hzi_type_eq_conservative1(hzi_in, hzi_out)
+        type(conservative1HZI_t), intent(inout) :: hzi_out
+        type(conservative1HZI_t), intent(in)    :: hzi_in
 
-   dsum = 0.0
-   miss = 0
+        call hzi_type_eq(hzi_in, hzi_out)
 
-   if (present(missing_value)) then
-      miss = count(dat(:,:) == missing_value)
-      low  = minval(dat(:,:), dat(:,:) /= missing_value)
-      high = maxval(dat(:,:), dat(:,:) /= missing_value)
-      dsum = sum(dat(:,:), dat(:,:) /= missing_value)
-   else if(present(mask)) then
-      miss = count(mask(:,:) <= 0.5)
-      low  = minval(dat(:,:),mask=mask(:,:) > 0.5)
-      high = maxval(dat(:,:),mask=mask(:,:) > 0.5)
-      dsum = sum(dat(:,:), mask=mask(:,:) > 0.5)
-   else
-      miss = 0
-      low  = minval(dat(:,:))
-      high = maxval(dat(:,:))
-      dsum = sum(dat(:,:))
-   endif
-   avg = 0.0
+        hzi_out%faci            => hzi_in%faci
+        hzi_out%facj            => hzi_in%facj
+        hzi_out%ilon            => hzi_in%ilon
+        hzi_out%jlat            => hzi_in%jlat
+    end subroutine hzi_type_eq_conservative1
 
-   npts = size(dat(:,:)) - miss
-   if(pe == root_pe) then
-      do p = 1, npes - 1  ! root_pe receive data from other pe
-      ! Force use of "scalar", integer pointer mpp interface
-         call mpp_recv(buffer_real(1),glen=3, from_pe=p+root_pe, tag=COMM_TAG_1)
-         dsum = dsum + buffer_real(1)
-         low  = min(low, buffer_real(2))
-         high = max(high, buffer_real(3))
-         call mpp_recv(buffer_int(1), glen=2, from_pe=p+root_pe, tag=COMM_TAG_2)
-         miss = miss + buffer_int(1)
-         npts = npts + buffer_int(2)
-      enddo
-      if(npts == 0.) then
-         print*, 'Warning: no points is valid'
-      else
-         avg = dsum/real(npts)
-      endif
-    else   ! other pe send data to the root_pe.
-      buffer_real(1) = dsum
-      buffer_real(2) = low
-      buffer_real(3) = high
-      ! Force use of "scalar", integer pointer mpp interface
-      call mpp_send(buffer_real(1),plen=3,to_pe=root_pe, tag=COMM_TAG_1)
-      buffer_int(1) = miss
-      buffer_int(2) = npts
-      call mpp_send(buffer_int(1), plen=2, to_pe=root_pe, tag=COMM_TAG_2)
-    endif
+    subroutine hzi_type_eq_conservative2(hzi_in, hzi_out)
+        type(conservative2HZI_t), intent(inout) :: hzi_out
+        type(conservative2HZI_t), intent(in)    :: hzi_in
 
-    call mpp_sync_self()
+        call hzi_type_eq(hzi_in, hzi_out)
 
-    return
+        hzi_out%nxgrid          =  hzi_in%nxgrid
+        hzi_out%i_src           => hzi_in%i_src
+        hzi_out%j_src           => hzi_in%j_src
+        hzi_out%i_dst           => hzi_in%i_dst
+        hzi_out%j_dst           => hzi_in%j_dst
+        hzi_out%area_frac_dst   => hzi_in%area_frac_dst
+        !TODO: what about mask? is this a bug?
+    end subroutine hzi_type_eq_conservative2
 
- end subroutine stats
+    subroutine hzi_type_eq_bilinear(hzi_in, hzi_out)
+        type(bilinearHZI_t), intent(inout) :: hzi_out
+        type(bilinearHZI_t), intent(in)    :: hzi_in
 
-!#################################################################################################################################
- subroutine horiz_interp_type_eq(horiz_interp_out, horiz_interp_in)
-    type(horiz_interp_type), intent(inout) :: horiz_interp_out
-    type(horiz_interp_type), intent(in)    :: horiz_interp_in
+        call hzi_type_eq(hzi_in, hzi_out)
 
-    if(.not.horiz_interp_in%I_am_initialized) then
-      call mpp_error(FATAL,'horiz_interp_type_eq: horiz_interp_type variable on right hand side is unassigned')
-    endif
+        hzi_out%wti             => hzi_in%wti
+        hzi_out%wtj             => hzi_in%wtj
+    end subroutine hzi_type_eq_bilinear
 
-    horiz_interp_out%faci            => horiz_interp_in%faci
-    horiz_interp_out%facj            => horiz_interp_in%facj
-    horiz_interp_out%ilon            => horiz_interp_in%ilon
-    horiz_interp_out%jlat            => horiz_interp_in%jlat
-    horiz_interp_out%area_src        => horiz_interp_in%area_src
-    horiz_interp_out%area_dst        => horiz_interp_in%area_dst
-    horiz_interp_out%wti             => horiz_interp_in%wti
-    horiz_interp_out%wtj             => horiz_interp_in%wtj
-    horiz_interp_out%i_lon           => horiz_interp_in%i_lon
-    horiz_interp_out%j_lat           => horiz_interp_in%j_lat
-    horiz_interp_out%src_dist        => horiz_interp_in%src_dist
-    horiz_interp_out%found_neighbors => horiz_interp_in%found_neighbors
-    horiz_interp_out%max_src_dist    =  horiz_interp_in%max_src_dist
-    horiz_interp_out%num_found       => horiz_interp_in%num_found
-    horiz_interp_out%nlon_src        =  horiz_interp_in%nlon_src
-    horiz_interp_out%nlat_src        =  horiz_interp_in%nlat_src
-    horiz_interp_out%nlon_dst        =  horiz_interp_in%nlon_dst
-    horiz_interp_out%nlat_dst        =  horiz_interp_in%nlat_dst
-    horiz_interp_out%interp_method   =  horiz_interp_in%interp_method
-    horiz_interp_out%rat_x           => horiz_interp_in%rat_x
-    horiz_interp_out%rat_y           => horiz_interp_in%rat_y
-    horiz_interp_out%lon_in          => horiz_interp_in%lon_in
-    horiz_interp_out%lat_in          => horiz_interp_in%lat_in
-    horiz_interp_out%I_am_initialized = .true.
-    horiz_interp_out%i_src           => horiz_interp_in%i_src
-    horiz_interp_out%j_src           => horiz_interp_in%j_src
-    horiz_interp_out%i_dst           => horiz_interp_in%i_dst
-    horiz_interp_out%j_dst           => horiz_interp_in%j_dst
-    horiz_interp_out%area_frac_dst   => horiz_interp_in%area_frac_dst
-    if(horiz_interp_in%interp_method == CONSERVE) then
-       horiz_interp_out%version =  horiz_interp_in%version
-       if(horiz_interp_in%version==2) horiz_interp_out%nxgrid = horiz_interp_in%nxgrid
-    end if
+    subroutine hzi_type_eq_spherical(hzi_in, hzi_out)
+        type(sphericalHZI_t), intent(inout) :: hzi_out
+        type(sphericalHZI_t), intent(in)    :: hzi_in
 
- end subroutine horiz_interp_type_eq
-!#################################################################################################################################
+        call hzi_type_eq(hzi_in, hzi_out)
 
-end module horiz_interp_type_mod
+    end subroutine hzi_type_eq_spherical
+
+    subroutine hzi_type_eq_bicubic(hzi_in, hzi_out)
+        type(bicubicHZI_t), intent(inout) :: hzi_out
+        type(bicubicHZI_t), intent(in)    :: hzi_in
+
+        call hzi_type_eq(hzi_in, hzi_out)
+
+        hzi_out%wti             => hzi_in%wti
+        hzi_out%ilon            => hzi_in%ilon
+        hzi_out%jlat            => hzi_in%jlat
+    end subroutine hzi_type_eq_bicubic
+
+
+end module horizontal_interpolator_types_mod
