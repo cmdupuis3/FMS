@@ -265,26 +265,25 @@ contains
   end subroutine horiz_interp_init
 
 
-  subroutine hzi_new_conservative_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
-
-    type(conservative1HZI_t), intent(inout) :: Interp
+  function hzi_new_conservative_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
+    type(conservative1HZI_t) :: Interp
     real, intent(in), dimension(:)          :: lon_in , lat_in
     real, intent(in), dimension(:)          :: lon_out, lat_out
     integer, intent(in), optional           :: verbose
 
     call horiz_interp_init
-    call horiz_interp_conservative_new_1dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+    call horiz_interp_conservative_new_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
-  end subroutine hzi_new_conservative_1dx1d
+  end function hzi_new_conservative_1dx1d
 
 
-  subroutine hzi_new_bilinear_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+  function hzi_new_bilinear_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
-    type(bilinearHZI_t), intent(inout) :: Interp
-    real, intent(in),  dimension(:)    :: lon_in , lat_in
-    real, intent(in),  dimension(:)    :: lon_out, lat_out
-    integer, intent(in), optional      :: verbose
-    logical, intent(in), optional      :: src_modulo
+    type(bilinearHZI_t) :: Interp
+    real, intent(in), dimension(:) :: lon_in , lat_in
+    real, intent(in), dimension(:) :: lon_out, lat_out
+    integer, intent(in), optional  :: verbose
+    logical, intent(in), optional  :: src_modulo
 
     real, dimension(:,:), allocatable :: lon_dst, lat_dst
     real, dimension(:),   allocatable :: lon_src_1d, lat_src_1d
@@ -313,16 +312,16 @@ contains
    call horiz_interp_bilinear_new ( Interp, lon_src_1d, lat_src_1d, lon_dst, lat_dst, verbose, src_modulo)
    deallocate(lon_src_1d, lat_src_1d, lon_dst, lat_dst)
 
-  end subroutine hzi_new_bilinear_1dx1d
+  end function hzi_new_bilinear_1dx1d
 
 
-  subroutine hzi_new_bilinear_1dx1d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+  function hzi_new_bilinear_1dx1d_centered (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
-    type(bilinearHZI_t), intent(inout) :: Interp
-    real, intent(in),  dimension(:)    :: lon_in , lat_in
-    real, intent(in),  dimension(:)    :: lon_out, lat_out
-    integer, intent(in), optional      :: verbose
-    logical, intent(in), optional      :: src_modulo
+    type(bilinearHZI_t) :: Interp
+    real, intent(in), dimension(:) :: lon_in , lat_in
+    real, intent(in), dimension(:) :: lon_out, lat_out
+    integer, intent(in), optional  :: verbose
+    logical, intent(in), optional  :: src_modulo
 
     real, dimension(:,:), allocatable :: lon_dst, lat_dst
     integer                           :: i, j, nlon_out, nlat_out
@@ -341,18 +340,18 @@ contains
    call horiz_interp_bilinear_new ( Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
    deallocate(lon_dst, lat_dst)
 
-  end subroutine hzi_new_bilinear_1dx1d_centered
+  end function hzi_new_bilinear_1dx1d_centered
 
-  subroutine hzi_new_bicubic_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+  function hzi_new_bicubic_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
-    type(bicubicHZI_t), intent(inout) :: Interp
-    real, intent(in),  dimension(:)   :: lon_in , lat_in
-    real, intent(in),  dimension(:)   :: lon_out, lat_out
-    integer, intent(in),     optional :: verbose
-    logical, intent(in),     optional :: src_modulo
+    type(bicubicHZI_t) :: Interp
+    real, intent(in), dimension(:) :: lon_in , lat_in
+    real, intent(in), dimension(:) :: lon_out, lat_out
+    integer, intent(in), optional  :: verbose
+    logical, intent(in), optional  :: src_modulo
 
-    real, dimension(:),   allocatable :: lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d
-    integer                           :: i, j, nlon_in, nlat_in, nlon_out, nlat_out
+    real, dimension(:), allocatable :: lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d
+    integer                         :: i, j, nlon_in, nlat_in, nlon_out, nlat_out
 
     call horiz_interp_init
 
@@ -377,32 +376,32 @@ contains
       verbose, src_modulo)
    deallocate(lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d)
 
-  end subroutine hzi_new_bicubic_1dx1d
+  end function hzi_new_bicubic_1dx1d
 
-  subroutine hzi_new_bicubic_1dx1d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+  function hzi_new_bicubic_1dx1d_centered (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
-    type(bicubicHZI_t), intent(inout) :: Interp
-    real, intent(in),  dimension(:)   :: lon_in , lat_in
-    real, intent(in),  dimension(:)   :: lon_out, lat_out
-    integer, intent(in),     optional :: verbose
-    logical, intent(in),     optional :: src_modulo
+    type(bicubicHZI_t) :: Interp
+    real, intent(in), dimension(:) :: lon_in , lat_in
+    real, intent(in), dimension(:) :: lon_out, lat_out
+    integer, intent(in), optional  :: verbose
+    logical, intent(in), optional  :: src_modulo
 
     call horiz_interp_init
 
     !No need to expand to 2d, horiz_interp_bicubic_new does 1d-1d
     call horiz_interp_bicubic_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
 
-  end subroutine hzi_new_bicubic_1dx1d_centered
+  end function hzi_new_bicubic_1dx1d_centered
 
 
-  subroutine hzi_new_spherical_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo)
+  function hzi_new_spherical_1dx1d (lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
 
-    type(sphericalHZI_t), intent(inout) :: Interp
-    real, intent(in),  dimension(:)     :: lon_in , lat_in
-    real, intent(in),  dimension(:)     :: lon_out, lat_out
-    integer, intent(in),       optional :: num_nbrs
-    real,    intent(in),       optional :: max_dist
-    logical, intent(in),       optional :: src_modulo
+    type(sphericalHZI_t) :: Interp
+    real, intent(in), dimension(:) :: lon_in , lat_in
+    real, intent(in), dimension(:) :: lon_out, lat_out
+    integer, intent(in),  optional :: num_nbrs
+    real,    intent(in),  optional :: max_dist
+    logical, intent(in),  optional :: src_modulo
 
     real, dimension(:,:), allocatable :: lon_src, lat_src, lon_dst, lat_dst
     integer                           :: i, j, nlon_in, nlat_in, nlon_out, nlat_out
@@ -425,14 +424,13 @@ contains
    do j = 1, nlat_out
       lat_dst(:,j) = lat_out(j)
    enddo
-   call horiz_interp_spherical_new ( Interp, lon_src, lat_src, lon_dst, lat_dst, &
-      num_nbrs, max_dist, src_modulo)
+   call horiz_interp_spherical_new ( Interp, lon_src, lat_src, lon_dst, lat_dst, num_nbrs, max_dist, src_modulo)
    deallocate(lon_src, lat_src, lon_dst, lat_dst)
 
-  end subroutine hzi_new_spherical_1dx1d
+  end function hzi_new_spherical_1dx1d
 
 
- subroutine horiz_interp_new_1d_src (Interp, lon_in, lat_in, lon_out, lat_out,   &
+ subroutine horiz_interp_new_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out,   &
                                      verbose, interp_method, num_nbrs, max_dist, &
                                      src_modulo, grid_at_center, mask_in, mask_out, is_latlon_out )
 
@@ -544,7 +542,7 @@ contains
 
  end subroutine horiz_interp_new_1d_src
 
- subroutine horiz_interp_new_2d (Interp, lon_in, lat_in, lon_out, lat_out,   &
+ subroutine horiz_interp_new_2dx2d (Interp, lon_in, lat_in, lon_out, lat_out,   &
                                  verbose, interp_method, num_nbrs, max_dist, &
                                  src_modulo, mask_in, mask_out, is_latlon_in, is_latlon_out  )
  type(horiz_interp_type), intent(inout)     :: Interp
@@ -615,7 +613,7 @@ contains
 
  end subroutine horiz_interp_new_2d
 
- subroutine horiz_interp_new_1d_dst (Interp, lon_in, lat_in, lon_out, lat_out,   &
+ subroutine horiz_interp_new_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out,   &
       verbose, interp_method, num_nbrs, max_dist, src_modulo, mask_in, mask_out, is_latlon_in )
    type(horiz_interp_type), intent(inout)     :: Interp
    real, intent(in),  dimension(:,:)          :: lon_in , lat_in
