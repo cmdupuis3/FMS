@@ -212,22 +212,6 @@ use horiz_interp_spherical_mod, only: horiz_interp_spherical_new, horiz_interp_s
  end interface
 ! </INTERFACE>
 
-
- !--- namelist interface
- !<NAMELIST NAME="horiz_interp_nml">
- ! <DATA NAME="reproduce_siena" TYPE="logical" DEFAULT=".FALSE." >
- !   Set reproduce_siena = .true. to reproduce siena results.
- !   Set reproduce_siena = .false. to decrease truncation error
- !   in routine poly_area in file mosaic_util.c. The truncation error of
- !   second order conservative remapping might be big for high resolution
- !   grid.
- ! </DATA>
- !</NAMELIST>
-
- logical :: reproduce_siena = .false.
-
- namelist /horiz_interp_nml/ reproduce_siena
-
 !-----------------------------------------------------------------------
 ! Include variable "version" to be written to log file.
 #include<file_version.h>
@@ -256,12 +240,6 @@ contains
   if (mpp_pe() == mpp_root_pe() ) then
      unit = stdlog()
      write (unit, nml=horiz_interp_nml)
-  endif
-
-  if( reproduce_siena ) then
-     call mpp_error(FATAL, "horiz_interp_mod: You have overridden the default value of reproduce_siena " // &
-                           "and set it to .true. in horiz_interp_nml. This is a temporary workaround to " // &
-                           "allow for consistency in continuing experiments. Please remove this namelist " )
   endif
 
   call horiz_interp_conserve_init
