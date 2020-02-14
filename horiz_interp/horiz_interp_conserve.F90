@@ -108,11 +108,6 @@ interface horiz_interp_conservative
    module procedure horiz_interp_conservative_version2
 end interface
 
-interface hzi_delete_conservative
-   module procedure hzi_delete_conservative1
-   module procedure hzi_delete_conservative2
-end interface hzi_delete_conservative
-
   public :: horiz_interp_conservative_init
   public :: horiz_interp_conservative_new, horiz_interp_conservative, hzi_delete_conservative1, hzi_delete_conservative2
 
@@ -170,7 +165,6 @@ contains
 
     hpi = 0.5*pi
     tpi = 4.*hpi
-    Interp%version = 1
     nlon_in = size(lon_in(:))-1;  nlat_in = size(lat_in(:))-1
     nlon_out = size(lon_out(:))-1;  nlat_out = size(lat_out(:))-1
 
@@ -331,7 +325,7 @@ contains
 
   subroutine horiz_interp_conservative_new_1dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(conservative1HZI_t),       intent(inout) :: Interp
+    type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:)   :: lon_in , lat_in
     real, intent(in),              dimension(:,:) :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
@@ -483,7 +477,6 @@ contains
     allocate(Interp%i_src(nxgrid), Interp%j_src(nxgrid) )
     allocate(Interp%i_dst(nxgrid), Interp%j_dst(nxgrid) )
     allocate(Interp%area_frac_dst(nxgrid) )
-    Interp%version = 2
     Interp%nxgrid   = nxgrid
     Interp%i_src = i_src(1:nxgrid)+1 ! in C, the starting index is 0
     Interp%j_src = j_src(1:nxgrid)+1
@@ -517,7 +510,7 @@ contains
 
   subroutine horiz_interp_conservative_new_2dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(conservative1HZI_t),       intent(inout) :: Interp
+    type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
     real, intent(in),              dimension(:)   :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
@@ -576,7 +569,6 @@ contains
     allocate(Interp%i_src(nxgrid), Interp%j_src(nxgrid) )
     allocate(Interp%i_dst(nxgrid), Interp%j_dst(nxgrid) )
     allocate(Interp%area_frac_dst(nxgrid) )
-    Interp%version = 2
     Interp%nxgrid   = nxgrid
     Interp%i_src = i_src(1:nxgrid)+1 ! in C, the starting index is 0
     Interp%j_src = j_src(1:nxgrid)+1
@@ -609,7 +601,7 @@ contains
 
   subroutine horiz_interp_conservative_new_2dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
-    type(conservative1HZI_t),       intent(inout) :: Interp
+    type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
     real, intent(in),              dimension(:,:) :: lon_out, lat_out
     real, intent(in),    optional, dimension(:,:) :: mask_in
@@ -689,7 +681,6 @@ contains
     allocate(Interp%i_src(nxgrid), Interp%j_src(nxgrid) )
     allocate(Interp%i_dst(nxgrid), Interp%j_dst(nxgrid) )
     allocate(Interp%area_frac_dst(nxgrid) )
-    Interp%version = 2
     Interp%nxgrid   = nxgrid
     Interp%i_src = i_src(1:nxgrid)+1 ! in C, the starting index is 0
     Interp%j_src = j_src(1:nxgrid)+1
