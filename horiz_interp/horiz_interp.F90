@@ -644,9 +644,9 @@ contains
                 allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
                 Interp%mask_in = mask_in
             end if
-            call horiz_interp_conserve_new (Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, verbose=verbose)
+            call horiz_interp_conservative_new_2dx1d (Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, verbose=verbose)
         else
-            call horiz_interp_conserve_new (Interp, lon_in,      lat_in,      lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call horiz_interp_conservative_new_2dx1d (Interp, lon_in,      lat_in,      lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         end if
 
         deallocate(lon_dst,lat_dst)
