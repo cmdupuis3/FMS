@@ -422,9 +422,9 @@ contains
                 allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
                 Interp%mask_in = mask_in
             end if
-            call horiz_interp_conserve_new (Interp, lon_in, lat_in, lon_out(:,1), lat_out(1,:), verbose=verbose )
+            call horiz_interp_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out(:,1), lat_out(1,:), verbose=verbose)
         else
-            call horiz_interp_conserve_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call horiz_interp_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         end if
 
    end function hzi_new_conservative_1dx2d
@@ -538,76 +538,73 @@ contains
 
     end function hzi_new_spherical_1dx2d
 
- subroutine horiz_interp_new_2dx2d (Interp, lon_in, lat_in, lon_out, lat_out,   &
-                                 verbose, interp_method, num_nbrs, max_dist, &
-                                 src_modulo, mask_in, mask_out, is_latlon_in, is_latlon_out  )
- type(horiz_interp_type), intent(inout)     :: Interp
- real, intent(in),  dimension(:,:)          :: lon_in , lat_in
- real, intent(in),  dimension(:,:)          :: lon_out, lat_out
- integer, intent(in),              optional :: verbose
- character(len=*), intent(in),     optional :: interp_method
- integer, intent(in),              optional :: num_nbrs
- real,    intent(in),              optional :: max_dist
- logical, intent(in),              optional :: src_modulo
- real, intent(in), dimension(:,:), optional :: mask_in
- real, intent(out),dimension(:,:), optional :: mask_out
- logical, intent(in),              optional :: is_latlon_in, is_latlon_out
- logical           :: src_is_latlon, dst_is_latlon
- character(len=40) :: method
+    function hzi_new_conservative_2dx2d (lon_in, lat_in, lon_out, lat_out, verbose, mask_in, mask_out, is_latlon_in, is_latlon_out) result(Interp)
+        type(conservative2HZI_t) :: Interp
+        real, intent(in), dimension(:,:) :: lon_in , lat_in
+        real, intent(in), dimension(:,:) :: lon_out, lat_out
+        integer, intent(in),              optional :: verbose
+        real, intent(in), dimension(:,:), optional :: mask_in
+        real, intent(out),dimension(:,:), optional :: mask_out
+        logical, intent(in),              optional :: is_latlon_in, is_latlon_out
 
-   call horiz_interp_init
+        logical :: src_is_latlon, dst_is_latlon
 
-   method = 'bilinear'
-   if(present(interp_method)) method = interp_method
+        call horiz_interp_init
 
-   select case (trim(method))
-   case ("conservative")
-      Interp%interp_method = CONSERVE
-      if(PRESENT(is_latlon_in)) then
-         src_is_latlon = is_latlon_in
-      else
-         src_is_latlon = is_lat_lon(lon_in, lat_in)
-      end if
-      if(PRESENT(is_latlon_out)) then
-         dst_is_latlon = is_latlon_out
-      else
-         dst_is_latlon = is_lat_lon(lon_out, lat_out)
-      end if
-      if(src_is_latlon .AND. dst_is_latlon) then
-         if(present(mask_in)) then
-            if ( ANY(mask_in < -.0001) .or. ANY(mask_in > 1.0001)  ) call mpp_error(FATAL, &
-              'horiz_interp_conserve_new_2d(horiz_interp_conserve_mod): input mask not between 0,1')
-            allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
-            Interp%mask_in = mask_in
-         end if
-         call horiz_interp_conserve_new ( Interp, lon_in(:,1), lat_in(1,:), lon_out(:,1), lat_out(1,:), &
-              verbose=verbose )
-      else if(src_is_latlon) then
-         call horiz_interp_conserve_new ( Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, &
-              verbose=verbose, mask_in=mask_in, mask_out=mask_out )
-      else if(dst_is_latlon) then
-         call horiz_interp_conserve_new ( Interp, lon_in, lat_in, lon_out(:,1), lat_out(1,:), &
-              verbose=verbose, mask_in=mask_in, mask_out=mask_out )
-      else
-         call horiz_interp_conserve_new ( Interp, lon_in, lat_in, lon_out, lat_out, &
-              verbose=verbose, mask_in=mask_in, mask_out=mask_out )
-      end if
+        if(PRESENT(is_latlon_in)) then
+            src_is_latlon = is_latlon_in
+        else
+            src_is_latlon = is_lat_lon(lon_in, lat_in)
+        end if
+        if(PRESENT(is_latlon_out)) then
+            dst_is_latlon = is_latlon_out
+        else
+            dst_is_latlon = is_lat_lon(lon_out, lat_out)
+        end if
+        if(src_is_latlon .AND. dst_is_latlon) then
+            if(present(mask_in)) then
+                if ( ANY(mask_in < -.0001) .or. ANY(mask_in > 1.0001)  ) call mpp_error(FATAL, &
+                    'horiz_interp_conserve_new_2d(horiz_interp_conserve_mod): input mask not between 0,1')
+                allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
+                Interp%mask_in = mask_in
+            end if
+            call horiz_interp_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out(:,1), lat_out(1,:), verbose=verbose)
+        else if(src_is_latlon .AND. .not. dst_is_latlon) then
+            call horiz_interp_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+        else if(.not. src_is_latlon .AND. dst_is_latlon) then
+            call horiz_interp_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out(:,1), lat_out(1,:), verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+        else
+            call horiz_interp_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+        end if
 
-   case ("spherical")
-      Interp%interp_method = SPHERICA
-      call horiz_interp_spherical_new ( Interp, lon_in, lat_in, lon_out, lat_out, &
-                                    num_nbrs, max_dist, src_modulo )
-   case ("bilinear")
-      Interp%interp_method = BILINEAR
-      call horiz_interp_bilinear_new ( Interp, lon_in, lat_in, lon_out, lat_out, &
-                                        verbose, src_modulo )
-   case default
-      call mpp_error(FATAL,'when source grid are 2d, interp_method should be spherical or bilinear')
-   end select
+    end function hzi_new_conservative_2dx2d
 
-   Interp%I_am_initialized = .true.
+    function hzi_new_spherical_2dx2d (lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
 
- end subroutine horiz_interp_new_2dx2d
+        type(sphericalHZI_t) :: Interp
+        real, intent(in), dimension(:,:) :: lon_in , lat_in
+        real, intent(in), dimension(:,:) :: lon_out, lat_out
+        integer, intent(in), optional    :: num_nbrs
+        real,    intent(in), optional    :: max_dist
+        logical, intent(in), optional    :: src_modulo
+
+        call horiz_interp_init
+        call horiz_interp_spherical_new (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo)
+
+    end function hzi_new_spherical_2dx2d
+
+    function hzi_new_bilinear_2dx2d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+
+        type(bilinearHZI_t) :: Interp
+        real, intent(in), dimension(:,:) :: lon_in , lat_in
+        real, intent(in), dimension(:,:) :: lon_out, lat_out
+        integer, intent(in), optional    :: verbose
+        logical, intent(in), optional    :: src_modulo
+
+        call horiz_interp_init
+        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+
+    end function hzi_new_bilinear_2dx2d
 
  subroutine horiz_interp_new_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out,   &
       verbose, interp_method, num_nbrs, max_dist, src_modulo, mask_in, mask_out, is_latlon_in )
