@@ -118,12 +118,42 @@ module horiz_interp_mod
 !      interpolation you must first use the "horiz_interp_del" interface.
 !   </OUT>
 
-    interface horiz_interp_new
-       module procedure horiz_interp_new_1d     ! Source grid is 1d, destination grid is 1d
-       module procedure horiz_interp_new_1d_src ! Source grid is 1d, destination grid is 2d
-       module procedure horiz_interp_new_2d     ! Source grid is 2d, destination grid is 2d
-       module procedure horiz_interp_new_1d_dst ! Source grid is 2d, destination grid is 1d
+    interface hzi_new_conservative
+        module procedure hzi_new_conservative_1dx1d ! Source grid is 1d, destination grid is 1d
+        module procedure hzi_new_conservative_1dx2d ! Source grid is 1d, destination grid is 2d
+        module procedure hzi_new_conservative_2dx2d ! Source grid is 2d, destination grid is 2d
+        module procedure hzi_new_conservative_2dx1d ! Source grid is 2d, destination grid is 1d
     end interface
+
+    interface hzi_new_bilinear
+        module procedure hzi_new_bilinear_1dx1d
+        module procedure hzi_new_bilinear_1dx2d
+        module procedure hzi_new_bilinear_2dx2d
+        module procedure hzi_new_bilinear_2dx1d
+    end interface
+
+    interface hzi_new_bilinear_centered
+        module procedure hzi_new_bilinear_1dx1d_centered
+        module procedure hzi_new_bilinear_1dx2d_centered
+    end interface
+
+    interface hzi_new_bicubic
+        module procedure hzi_new_bicubic_1dx1d
+        module procedure hzi_new_bicubic_1dx2d
+    end interface
+
+    interface hzi_new_bicubic_centered
+        module procedure hzi_new_bicubic_1dx1d_centered
+        module procedure hzi_new_bicubic_1dx2d_centered
+    end interface
+
+    interface hzi_new_spherical
+        module procedure hzi_new_spherical_1dx1d
+        module procedure hzi_new_spherical_1dx2d
+        module procedure hzi_new_spherical_2dx2d
+        module procedure hzi_new_spherical_2dx1d
+    end interface
+
 ! </INTERFACE>
 
 ! <INTERFACE NAME="horiz_interp">
@@ -238,8 +268,8 @@ contains
 
     end subroutine horiz_interp_init
 
-
     function hzi_new_conservative_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
+
         type(conservative1HZI_t) :: Interp
         real, intent(in), dimension(:)          :: lon_in , lat_in
         real, intent(in), dimension(:)          :: lon_out, lat_out
@@ -277,6 +307,7 @@ contains
     end function hzi_new_conservative_1dx2d
 
     function hzi_new_conservative_2dx2d (lon_in, lat_in, lon_out, lat_out, verbose, mask_in, mask_out, is_latlon_in, is_latlon_out) result(Interp)
+
         type(conservative2HZI_t) :: Interp
         real, intent(in), dimension(:,:) :: lon_in , lat_in
         real, intent(in), dimension(:,:) :: lon_out, lat_out
