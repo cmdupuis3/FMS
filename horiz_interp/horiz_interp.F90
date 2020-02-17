@@ -606,79 +606,107 @@ contains
 
     end function hzi_new_bilinear_2dx2d
 
- subroutine horiz_interp_new_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out,   &
-      verbose, interp_method, num_nbrs, max_dist, src_modulo, mask_in, mask_out, is_latlon_in )
-   type(horiz_interp_type), intent(inout)     :: Interp
-   real, intent(in),  dimension(:,:)          :: lon_in , lat_in
-   real, intent(in),  dimension(:)            :: lon_out, lat_out
-   integer, intent(in),              optional :: verbose
-   character(len=*), intent(in),     optional :: interp_method
-   integer, intent(in),              optional :: num_nbrs
-   real,    intent(in),              optional :: max_dist
-   logical, intent(in),              optional :: src_modulo
-   real, intent(in), dimension(:,:), optional :: mask_in
-   real, intent(out),dimension(:,:), optional :: mask_out
-   logical, intent(in),              optional :: is_latlon_in
+    function hzi_new_conservative_2dx1d (lon_in, lat_in, lon_out, lat_out, verbose, mask_in, mask_out, is_latlon_in) result(Interp)
 
-   character(len=40) :: method
+        type(conservative2HZI_t) :: Interp
+        real, intent(in),  dimension(:,:)          :: lon_in , lat_in
+        real, intent(in),  dimension(:)            :: lon_out, lat_out
+        integer, intent(in),              optional :: verbose
+        real, intent(in), dimension(:,:), optional :: mask_in
+        real, intent(out),dimension(:,:), optional :: mask_out
+        logical, intent(in),              optional :: is_latlon_in
 
-   integer                           :: i, j, nlon_out, nlat_out
-   real, dimension(:,:), allocatable :: lon_dst, lat_dst
-   logical                           :: src_is_latlon
+        integer                           :: i, j, nlon_out, nlat_out
+        real, dimension(:,:), allocatable :: lon_dst, lat_dst
+        logical                           :: src_is_latlon
 
-   call horiz_interp_init
+        call horiz_interp_init
 
-   method = 'bilinear'
-   if(present(interp_method)) method = interp_method
+        nlon_out = size(lon_out(:)); nlat_out = size(lat_out(:))
+        allocate(lon_dst(nlon_out,nlat_out), lat_dst(nlon_out,nlat_out))
+        do i = 1, nlon_out
+            lon_dst(i,:) = lon_out(i)
+        enddo
+        do j = 1, nlat_out
+            lat_dst(:,j) = lat_out(j)
+        enddo
 
-   nlon_out = size(lon_out(:)); nlat_out = size(lat_out(:))
-   allocate(lon_dst(nlon_out,nlat_out), lat_dst(nlon_out,nlat_out))
-   do i = 1, nlon_out
-      lon_dst(i,:) = lon_out(i)
-   enddo
-   do j = 1, nlat_out
-      lat_dst(:,j) = lat_out(j)
-   enddo
+        if(PRESENT(is_latlon_in)) then
+            src_is_latlon = is_latlon_in
+        else
+            src_is_latlon = is_lat_lon(lon_in, lat_in)
+        end if
 
-   select case (trim(method))
-   case ("conservative")
-      Interp%interp_method = CONSERVE
-      if(PRESENT(is_latlon_in)) then
-         src_is_latlon = is_latlon_in
-      else
-         src_is_latlon = is_lat_lon(lon_in, lat_in)
-      end if
+        if(src_is_latlon) then
+            if(present(mask_in)) then
+                if ( ANY(mask_in < -.0001) .or. ANY(mask_in > 1.0001)  ) call mpp_error(FATAL, &
+                    'horiz_interp_conserve_new_1d_dst(horiz_interp_conserve_mod): input mask not between 0,1')
+                allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
+                Interp%mask_in = mask_in
+            end if
+            call horiz_interp_conserve_new (Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, verbose=verbose)
+        else
+            call horiz_interp_conserve_new (Interp, lon_in,      lat_in,      lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+        end if
 
-      if(src_is_latlon) then
-         if(present(mask_in)) then
-            if ( ANY(mask_in < -.0001) .or. ANY(mask_in > 1.0001)  ) call mpp_error(FATAL, &
-              'horiz_interp_conserve_new_1d_dst(horiz_interp_conserve_mod): input mask not between 0,1')
-            allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
-            Interp%mask_in = mask_in
-         end if
-         call horiz_interp_conserve_new ( Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, &
-              verbose=verbose)
-      else
-         call horiz_interp_conserve_new ( Interp, lon_in, lat_in, lon_out, lat_out, &
-              verbose=verbose, mask_in=mask_in, mask_out=mask_out )
-      end if
-   case ("bilinear")
-      Interp%interp_method = BILINEAR
-      call horiz_interp_bilinear_new ( Interp, lon_in, lat_in, lon_dst, lat_dst, &
-           verbose, src_modulo )
-   case ("spherical")
-      Interp%interp_method = SPHERICA
-      call horiz_interp_spherical_new ( Interp, lon_in, lat_in, lon_dst, lat_dst, &
-           num_nbrs, max_dist, src_modulo)
-   case default
-      call mpp_error(FATAL,'when source grid are 2d, interp_method should be spherical or bilinear')
-   end select
+        deallocate(lon_dst,lat_dst)
 
-   deallocate(lon_dst,lat_dst)
+    end function hzi_new_conservative_2dx1d
 
-   Interp%I_am_initialized = .true.
+    function hzi_new_bilinear_2dx1d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
- end subroutine horiz_interp_new_2dx1d
+        type(bilinearHZI_t) :: Interp
+        real, intent(in), dimension(:,:) :: lon_in , lat_in
+        real, intent(in), dimension(:)   :: lon_out, lat_out
+        integer, intent(in),    optional :: verbose
+        logical, intent(in),    optional :: src_modulo
+
+        integer                           :: i, j, nlon_out, nlat_out
+        real, dimension(:,:), allocatable :: lon_dst, lat_dst
+
+        call horiz_interp_init
+
+        nlon_out = size(lon_out(:)); nlat_out = size(lat_out(:))
+        allocate(lon_dst(nlon_out,nlat_out), lat_dst(nlon_out,nlat_out))
+        do i = 1, nlon_out
+            lon_dst(i,:) = lon_out(i)
+        enddo
+        do j = 1, nlat_out
+            lat_dst(:,j) = lat_out(j)
+        enddo
+
+        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
+        deallocate(lon_dst,lat_dst)
+
+    end function hzi_new_bilinear_2dx1d
+
+    subroutine hzi_new_spherical_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
+
+        type(sphericalHZI_t) :: Interp
+        real, intent(in), dimension(:,:) :: lon_in , lat_in
+        real, intent(in), dimension(:)   :: lon_out, lat_out
+        integer, intent(in),    optional :: num_nbrs
+        real,    intent(in),    optional :: max_dist
+        logical, intent(in),    optional :: src_modulo
+
+        integer                           :: i, j, nlon_out, nlat_out
+        real, dimension(:,:), allocatable :: lon_dst, lat_dst
+
+        call horiz_interp_init
+
+        nlon_out = size(lon_out(:)); nlat_out = size(lat_out(:))
+        allocate(lon_dst(nlon_out,nlat_out), lat_dst(nlon_out,nlat_out))
+        do i = 1, nlon_out
+            lon_dst(i,:) = lon_out(i)
+        enddo
+        do j = 1, nlat_out
+            lat_dst(:,j) = lat_out(j)
+        enddo
+
+        call horiz_interp_spherical_new ( Interp, lon_in, lat_in, lon_dst, lat_dst, num_nbrs, max_dist, src_modulo)
+        deallocate(lon_dst,lat_dst)
+
+    end subroutine hzi_new_spherical_2dx1d
 
 ! <SUBROUTINE NAME="horiz_interp_base_2d" INTERFACE="horiz_interp">
 !   <IN NAME="Interp" TYPE="type(horiz_interp_type)"> </IN>
@@ -1127,8 +1155,6 @@ contains
 
 end module horiz_interp_mod
 
-! <INFO>
-!   <NOTE>
 !       Has not been checked with grids that do not cover the sphere.
 !
 !       Has not been checked with the optional mask arguments.
@@ -1137,9 +1163,7 @@ end module horiz_interp_mod
 !       used for making this determination may need to be increased.
 !       This can be done by increasing the value of module variable
 !       num_iters (default 4).
-!   </NOTE>
-!   <TESTPROGRAM>
-!     <PRE>
+
 !       program test
 !       use horiz_interp_mod
 !       implicit none
@@ -1181,206 +1205,201 @@ end module horiz_interp_mod
 !         end subroutine setaxis
 !
 !       end program test
-!     </PRE>
-!   </TESTPROGRAM>
-! </INFO>
+
 #ifdef test_horiz_interp
 ! T More tests will be added in the future.
 program horiz_interp_test
 
-use mpp_mod,          only : mpp_init, mpp_exit, mpp_error, FATAL, stdout, mpp_npes
-use mpp_mod,          only : mpp_clock_id, mpp_clock_begin, mpp_clock_end
-use mpp_mod,          only : mpp_pe, mpp_root_pe, NOTE, MPP_CLOCK_SYNC, MPP_CLOCK_DETAILED
-use mpp_mod,          only : input_nml_file
-use mpp_io_mod,       only : mpp_io_init, mpp_io_exit
-use mpp_domains_mod,  only : mpp_define_layout, mpp_define_domains, mpp_get_compute_domain
-use mpp_domains_mod,  only : mpp_domains_init, domain2d
-use fms_mod,          only : check_nml_error
-use horiz_interp_mod, only : horiz_interp_init, horiz_interp_new, horiz_interp_del
-use horiz_interp_mod, only : horiz_interp, horiz_interp_type
-use constants_mod,    only : constants_init, PI
+    use mpp_mod,          only : mpp_init, mpp_exit, mpp_error, FATAL, stdout, mpp_npes
+    use mpp_mod,          only : mpp_clock_id, mpp_clock_begin, mpp_clock_end
+    use mpp_mod,          only : mpp_pe, mpp_root_pe, NOTE, MPP_CLOCK_SYNC, MPP_CLOCK_DETAILED
+    use mpp_mod,          only : input_nml_file
+    use mpp_io_mod,       only : mpp_io_init, mpp_io_exit
+    use mpp_domains_mod,  only : mpp_define_layout, mpp_define_domains, mpp_get_compute_domain
+    use mpp_domains_mod,  only : mpp_domains_init, domain2d
+    use fms_mod,          only : check_nml_error
+    use horiz_interp_mod, only : horiz_interp_init, horiz_interp_new, horiz_interp_del
+    use horiz_interp_mod, only : horiz_interp, horiz_interp_type
+    use constants_mod,    only : constants_init, PI
 
-implicit none
+    implicit none
 
-  integer :: ni_src = 360, nj_src = 180
-  integer :: ni_dst = 144, nj_dst = 72
+    integer :: ni_src = 360, nj_src = 180
+    integer :: ni_dst = 144, nj_dst = 72
 
-  namelist /test_horiz_interp_nml/ ni_src, nj_src, ni_dst, nj_dst
+    namelist /test_horiz_interp_nml/ ni_src, nj_src, ni_dst, nj_dst
 
-  real :: lon_src_beg = 0,    lon_src_end = 360
-  real :: lat_src_beg = -90,  lat_src_end = 90
-  real :: lon_dst_beg = -280, lon_dst_end = 80
-  real :: lat_dst_beg = -90,  lat_dst_end = 90
-  real :: D2R = PI/180.
-  real, parameter :: SMALL = 1.0e-10
+    real :: lon_src_beg = 0,    lon_src_end = 360
+    real :: lat_src_beg = -90,  lat_src_end = 90
+    real :: lon_dst_beg = -280, lon_dst_end = 80
+    real :: lat_dst_beg = -90,  lat_dst_end = 90
+    real :: D2R = PI/180.
+    real, parameter :: SMALL = 1.0e-10
 
-  type(domain2d)                    :: domain
-  type(horiz_interp_type)           :: Interp
-  integer                           :: id1, id2, id3, id4
-  integer                           :: isc, iec, jsc, jec, i, j
-  integer                           :: nml_unit, io, ierr, layout(2)
-  real                              :: dlon_src, dlat_src, dlon_dst, dlat_dst
-  real, allocatable, dimension(:)   :: lon1D_src, lat1D_src, lon1D_dst, lat1D_dst
-  real, allocatable, dimension(:,:) :: lon2D_src, lat2D_src, lon2D_dst, lat2D_dst
-  real, allocatable, dimension(:,:) :: data_src, data1_dst, data2_dst, data3_dst, data4_dst
+    type(domain2d)                    :: domain
+    type(horiz_interp_type)           :: Interp
+    integer                           :: id1, id2, id3, id4
+    integer                           :: isc, iec, jsc, jec, i, j
+    integer                           :: nml_unit, io, ierr, layout(2)
+    real                              :: dlon_src, dlat_src, dlon_dst, dlat_dst
+    real, allocatable, dimension(:)   :: lon1D_src, lat1D_src, lon1D_dst, lat1D_dst
+    real, allocatable, dimension(:,:) :: lon2D_src, lat2D_src, lon2D_dst, lat2D_dst
+    real, allocatable, dimension(:,:) :: data_src, data1_dst, data2_dst, data3_dst, data4_dst
 
-  call constants_init
-  call mpp_init
-  call mpp_domains_init
-  call mpp_io_init
-  call horiz_interp_init
+    call constants_init
+    call mpp_init
+    call mpp_domains_init
+    call mpp_io_init
+    call horiz_interp_init
 
-  !--- read namelist
-      read (input_nml_file, test_horiz_interp_nml, iostat=io)
-      ierr = check_nml_error(io, 'test_horiz_interp_nml')
+    !--- read namelist
+    read (input_nml_file, test_horiz_interp_nml, iostat=io)
+    ierr = check_nml_error(io, 'test_horiz_interp_nml')
 
-  !--- define domains
-  call mpp_define_layout( (/1, ni_dst, 1, nj_dst/), mpp_npes(), layout)
-  call mpp_define_domains((/1, ni_dst, 1, nj_dst/), layout, domain)
-  call mpp_get_compute_domain(domain,isc,iec,jsc,jec)
+    !--- define domains
+    call mpp_define_layout( (/1, ni_dst, 1, nj_dst/), mpp_npes(), layout)
+    call mpp_define_domains((/1, ni_dst, 1, nj_dst/), layout, domain)
+    call mpp_get_compute_domain(domain,isc,iec,jsc,jec)
 
-  !--- test conservative horiz_interp with a simple test. the source grid is the region
-  !    (0:360,-90:90) with grid size ni_src, nj_src ( default 360X180). and the destination
-  !    is the region (-280:80, -90:90) with grid size ni_dstXnj_dst( default 144X72).
-  !    integer checksum and global sum will be printed out for both the 1D and 2D version.
+    !--- test conservative horiz_interp with a simple test. the source grid is the region
+    !    (0:360,-90:90) with grid size ni_src, nj_src ( default 360X180). and the destination
+    !    is the region (-280:80, -90:90) with grid size ni_dstXnj_dst( default 144X72).
+    !    integer checksum and global sum will be printed out for both the 1D and 2D version.
 
-  allocate(lon2D_src(ni_src+1, nj_src+1), lat2D_src(ni_src+1, nj_src+1) )
-  allocate(lon1D_src(ni_src+1), lat1D_src(nj_src+1), data_src(ni_src, nj_src) )
+    allocate(lon2D_src(ni_src+1, nj_src+1), lat2D_src(ni_src+1, nj_src+1) )
+    allocate(lon1D_src(ni_src+1), lat1D_src(nj_src+1), data_src(ni_src, nj_src) )
 
-  allocate(lon2D_dst(isc:iec+1, jsc:jec+1), lat2D_dst(isc:iec+1, jsc:jec+1) )
-  allocate(lon1D_dst(isc:iec+1), lat1D_dst(jsc:jec+1) )
-  allocate(data1_dst(isc:iec, jsc:jec), data2_dst(isc:iec, jsc:jec) )
-  allocate(data3_dst(isc:iec, jsc:jec), data4_dst(isc:iec, jsc:jec) )
+    allocate(lon2D_dst(isc:iec+1, jsc:jec+1), lat2D_dst(isc:iec+1, jsc:jec+1) )
+    allocate(lon1D_dst(isc:iec+1), lat1D_dst(jsc:jec+1) )
+    allocate(data1_dst(isc:iec, jsc:jec), data2_dst(isc:iec, jsc:jec) )
+    allocate(data3_dst(isc:iec, jsc:jec), data4_dst(isc:iec, jsc:jec) )
 
-  ! set up longitude and latitude of source/destination grid.
-  dlon_src = (lon_src_end-lon_src_beg)/ni_src
-  dlat_src = (lat_src_end-lat_src_beg)/nj_src
-  dlon_dst = (lon_dst_end-lon_dst_beg)/ni_dst
-  dlat_dst = (lat_dst_end-lat_dst_beg)/nj_dst
+    ! set up longitude and latitude of source/destination grid.
+    dlon_src = (lon_src_end-lon_src_beg)/ni_src
+    dlat_src = (lat_src_end-lat_src_beg)/nj_src
+    dlon_dst = (lon_dst_end-lon_dst_beg)/ni_dst
+    dlat_dst = (lat_dst_end-lat_dst_beg)/nj_dst
 
-  do i = 1, ni_src+1
-     lon1D_src(i) = lon_src_beg + (i-1)*dlon_src
-  end do
+    do i = 1, ni_src+1
+        lon1D_src(i) = lon_src_beg + (i-1)*dlon_src
+    end do
 
-  do j = 1, nj_src+1
-     lat1D_src(j) = lat_src_beg + (j-1)*dlat_src
-  end do
+    do j = 1, nj_src+1
+        lat1D_src(j) = lat_src_beg + (j-1)*dlat_src
+    end do
 
-  do i = isc, iec+1
-     lon1D_dst(i) = lon_dst_beg + (i-1)*dlon_dst
-  end do
+    do i = isc, iec+1
+        lon1D_dst(i) = lon_dst_beg + (i-1)*dlon_dst
+    end do
 
-  do j = jsc, jec+1
-     lat1D_dst(j) = lat_dst_beg + (j-1)*dlat_dst
-  end do
+    do j = jsc, jec+1
+        lat1D_dst(j) = lat_dst_beg + (j-1)*dlat_dst
+    end do
 
-  ! scale grid to radians.
-  lon1D_src = lon1D_src * D2R
-  lat1D_src = lat1D_src * D2R
-  lon1D_dst = lon1D_dst * D2R
-  lat1D_dst = lat1D_dst * D2R
+    ! scale grid to radians.
+    lon1D_src = lon1D_src * D2R
+    lat1D_src = lat1D_src * D2R
+    lon1D_dst = lon1D_dst * D2R
+    lat1D_dst = lat1D_dst * D2R
 
-  do i = 1, ni_src+1
-     lon2D_src(i,:) = lon1D_src(i)
-  end do
+    do i = 1, ni_src+1
+        lon2D_src(i,:) = lon1D_src(i)
+    end do
 
-  do j = 1, nj_src+1
-     lat2D_src(:,j) = lat1D_src(j)
-  end do
+    do j = 1, nj_src+1
+        lat2D_src(:,j) = lat1D_src(j)
+    end do
 
-  do i = isc, iec+1
-     lon2D_dst(i,:) = lon1D_dst(i)
-  end do
+    do i = isc, iec+1
+        lon2D_dst(i,:) = lon1D_dst(i)
+    end do
 
-  do j = jsc, jec+1
-     lat2D_dst(:,j) = lat1D_dst(j)
-  end do
+    do j = jsc, jec+1
+        lat2D_dst(:,j) = lat1D_dst(j)
+    end do
 
-  !--- set up the source data
-  do j = 1, nj_src
-     do i = 1, ni_src
-        data_src(i,j) = i + j*0.001
-     end do
-  end do
+    !--- set up the source data
+    do j = 1, nj_src
+        do i = 1, ni_src
+            data_src(i,j) = i + j*0.001
+        end do
+    end do
 
-  id1 = mpp_clock_id( 'horiz_interp_1dx1d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
-  id2 = mpp_clock_id( 'horiz_interp_1dx2d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
-  id3 = mpp_clock_id( 'horiz_interp_2dx1d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
-  id4 = mpp_clock_id( 'horiz_interp_2dx2d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
+    id1 = mpp_clock_id( 'horiz_interp_1dx1d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
+    id2 = mpp_clock_id( 'horiz_interp_1dx2d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
+    id3 = mpp_clock_id( 'horiz_interp_2dx1d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
+    id4 = mpp_clock_id( 'horiz_interp_2dx2d', flags=MPP_CLOCK_SYNC+MPP_CLOCK_DETAILED )
 
-  ! --- 1dx1d version conservative interpolation
-  call mpp_clock_begin(id1)
-  call horiz_interp_new(Interp, lon1D_src, lat1D_src, lon1D_dst, lat1D_dst, interp_method = "conservative")
-  call horiz_interp(Interp, data_src, data1_dst)
-  call horiz_interp_del(Interp)
-  call mpp_clock_end(id1)
+    ! --- 1dx1d version conservative interpolation
+    call mpp_clock_begin(id1)
+    call horiz_interp_new(Interp, lon1D_src, lat1D_src, lon1D_dst, lat1D_dst, interp_method = "conservative")
+    call horiz_interp(Interp, data_src, data1_dst)
+    call horiz_interp_del(Interp)
+    call mpp_clock_end(id1)
 
-  ! --- 1dx2d version conservative interpolation
-  call mpp_clock_begin(id2)
-  call horiz_interp_new(Interp, lon1D_src, lat1D_src, lon2D_dst, lat2D_dst, interp_method = "conservative")
-  call horiz_interp(Interp, data_src, data2_dst)
-  call horiz_interp_del(Interp)
-  call mpp_clock_end(id2)
+    ! --- 1dx2d version conservative interpolation
+    call mpp_clock_begin(id2)
+    call horiz_interp_new(Interp, lon1D_src, lat1D_src, lon2D_dst, lat2D_dst, interp_method = "conservative")
+    call horiz_interp(Interp, data_src, data2_dst)
+    call horiz_interp_del(Interp)
+    call mpp_clock_end(id2)
 
-  ! --- 2dx1d version conservative interpolation
-  call mpp_clock_begin(id3)
-  call horiz_interp_new(Interp, lon2D_src, lat2D_src, lon1D_dst, lat1D_dst, interp_method = "conservative")
-  call horiz_interp(Interp, data_src, data3_dst)
-  call horiz_interp_del(Interp)
-  call mpp_clock_end(id3)
+    ! --- 2dx1d version conservative interpolation
+    call mpp_clock_begin(id3)
+    call horiz_interp_new(Interp, lon2D_src, lat2D_src, lon1D_dst, lat1D_dst, interp_method = "conservative")
+    call horiz_interp(Interp, data_src, data3_dst)
+    call horiz_interp_del(Interp)
+    call mpp_clock_end(id3)
 
-  ! --- 2dx2d version conservative interpolation
-  call mpp_clock_begin(id4)
-  call horiz_interp_new(Interp, lon2D_src, lat2D_src, lon2D_dst, lat2D_dst, interp_method = "conservative")
-  call horiz_interp(Interp, data_src, data4_dst)
-  call horiz_interp_del(Interp)
-  call mpp_clock_end(id4)
+    ! --- 2dx2d version conservative interpolation
+    call mpp_clock_begin(id4)
+    call horiz_interp_new(Interp, lon2D_src, lat2D_src, lon2D_dst, lat2D_dst, interp_method = "conservative")
+    call horiz_interp(Interp, data_src, data4_dst)
+    call horiz_interp_del(Interp)
+    call mpp_clock_end(id4)
 
-  !--- compare the data after interpolation between 1-D and 2-D version interpolation
-  do j = jsc, jsc
-     do i = isc, iec
-
-        if( abs(data1_dst(i,j)-data2_dst(i,j)) > SMALL ) then
-           print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
-           ", data2 = ", data2_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data2_dst(i,j)
-           call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data2_dst")
-        end if
-     end do
-  end do
+    !--- compare the data after interpolation between 1-D and 2-D version interpolation
+    do j = jsc, jsc
+        do i = isc, iec
+            if( abs(data1_dst(i,j)-data2_dst(i,j)) > SMALL ) then
+                print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
+                    ", data2 = ", data2_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data2_dst(i,j)
+                call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data2_dst")
+            end if
+        end do
+    end do
 
   if(mpp_pe() == mpp_root_pe()) call mpp_error(NOTE,   &
        "The test that verify 1dx2d version horiz_interp can reproduce 1dx1d version of horiz_interp is succesful")
 
-  do j = jsc, jsc
-     do i = isc, iec
+    do j = jsc, jsc
+        do i = isc, iec
+            if( abs(data1_dst(i,j)-data3_dst(i,j)) > SMALL ) then
+                print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
+                    ", data2 = ", data3_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data3_dst(i,j)
+                call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data3_dst")
+            end if
+        end do
+    end do
 
-        if( abs(data1_dst(i,j)-data3_dst(i,j)) > SMALL ) then
-           print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
-           ", data2 = ", data3_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data3_dst(i,j)
-           call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data3_dst")
-        end if
-     end do
-  end do
+    if(mpp_pe() == mpp_root_pe()) call mpp_error(NOTE,   &
+        "The test that verify 2dx1d version horiz_interp can reproduce 1dx1d version of horiz_interp is succesful")
 
-  if(mpp_pe() == mpp_root_pe()) call mpp_error(NOTE,   &
-       "The test that verify 2dx1d version horiz_interp can reproduce 1dx1d version of horiz_interp is succesful")
+    do j = jsc, jsc
+        do i = isc, iec
+            if( abs(data1_dst(i,j)-data4_dst(i,j)) > SMALL ) then
+                print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
+                    ", data2 = ", data4_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data4_dst(i,j)
+                call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data4_dst")
+            end if
+        end do
+    end do
 
-  do j = jsc, jsc
-     do i = isc, iec
+    if(mpp_pe() == mpp_root_pe()) call mpp_error(NOTE,   &
+        "The test that verify 2dx1d version horiz_interp can reproduce 1dx1d version of horiz_interp is succesful")
 
-        if( abs(data1_dst(i,j)-data4_dst(i,j)) > SMALL ) then
-           print*, "After interpolation At point (i,j) = (", i, ",", j, "), data1 = ", data1_dst(i,j), &
-           ", data2 = ", data4_dst(i,j), ", data1-data2 = ",  data1_dst(i,j) - data4_dst(i,j)
-           call mpp_error(FATAL,"horiz_interp_test: data1_dst does not approxiamate data4_dst")
-        end if
-     end do
-  end do
-
-  if(mpp_pe() == mpp_root_pe()) call mpp_error(NOTE,   &
-       "The test that verify 2dx2d version horiz_interp can reproduce 1dx1d version of horiz_interp is succesful")
-
-  call mpp_io_exit
-  call mpp_exit
+    call mpp_io_exit
+    call mpp_exit
 
 end program horiz_interp_test
 #endif
