@@ -95,11 +95,12 @@ module horizontal_interpolator_conservative_mod
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
-
+interface horiz_interp_conserve_new
      module procedure horiz_interp_conservative_new_1dx1d
      module procedure horiz_interp_conservative_new_1dx2d
      module procedure horiz_interp_conservative_new_2dx1d
      module procedure horiz_interp_conservative_new_2dx2d
+end interface
 
 interface horiz_interp_conservative
    module procedure horiz_interp_conservative_version1

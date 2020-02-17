@@ -90,7 +90,7 @@ module horizontal_interpolator_types_mod
 
     public :: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
     public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
-    public :: assignment(=)
+    public :: baseHZI_t, assignment(=)
 
 contains
 
