@@ -40,7 +40,7 @@ module horiz_interp_mod
     use constants_mod,              only: pi
     use horizontal_interpolator_types_mod,      only: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
     use horizontal_interpolator_types_mod,      only: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
-    use horizontal_interpolator_types_mod,      only: baseHZI_t, assignment(=)
+    use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t, assignment(=)
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conservative_new_1dx1d, horiz_interp_conservative_new_1dx2d
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
@@ -221,11 +221,6 @@ module horiz_interp_mod
     interface horiz_interp
         module procedure horiz_interp_base_2d
         module procedure horiz_interp_base_3d
-        module procedure horiz_interp_solo_1d
-        module procedure horiz_interp_solo_1d_src
-        module procedure horiz_interp_solo_2d
-        module procedure horiz_interp_solo_1d_dst
-        module procedure horiz_interp_solo_old
     end interface
 ! </INTERFACE>
 
@@ -733,453 +728,117 @@ contains
 
 
 
+    function horiz_interp_base_2d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle) result(data_out)
+
+        type (baseHZI_t), intent(in)                 :: Interp
+        real, intent(in),   dimension(:,:)           :: data_in
+        real,               dimension(:,:)           :: data_out
+        integer, intent(in),                optional :: verbose
+        real, intent(in),   dimension(:,:), optional :: mask_in
+        real, intent(out),  dimension(:,:), optional :: mask_out
+        real, intent(in),                   optional :: missing_value
+        integer, intent(in),                optional :: missing_permit
+        logical, intent(in),                optional :: new_missing_handle
+
+        select type(Interp)
+        !class is (baseHZI_t)
+        type is (conservativeHZI_t)
+            call horiz_interp_conservative (Interp, data_in, data_out, verbose, mask_in, mask_out)
+        type is (bilinearHZI_t)
+            call horiz_interp_bilinear     (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle )
+        type is (bicubicHZI_t)
+            call horiz_interp_bicubic      (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit)
+        type is (sphericalHZI_t)
+            call horiz_interp_spherical    (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value )
+        end select
+
+        return
+
+    end function horiz_interp_base_2d
+
+    function horiz_interp_base_3d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit) result(data_out)
+
+        type (baseHZI_t), intent(in)                   :: Interp
+        real, intent(in),   dimension(:,:,:)           :: data_in
+        real,               dimension(:,:,:)           :: data_out
+        integer, intent(in),                  optional :: verbose
+        real, intent(in),   dimension(:,:,:), optional :: mask_in
+        real, intent(out),  dimension(:,:,:), optional :: mask_out
+        real, intent(in),                     optional :: missing_value
+        integer, intent(in),                  optional :: missing_permit
+
+        integer :: n
+
+        do n = 1, size(data_in,3)
+            if (present(mask_in))
+                if(present(mask_out)) then
+                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                        mask_in = mask_in(:,:,n), mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
+                else
+                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                        mask_in = mask_in(:,:,n),                             missing_value = missing_value, missing_permit = missing_permit )
+                endif
+            else
+                if(present(mask_out)) then
+                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                                                  mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
+                else
+                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                                                                              missing_value = missing_value, missing_permit = missing_permit )
+                endif
+            endif
+        enddo
+
+        return
+
+    end function horiz_interp_base_3d
 
 
+    subroutine horiz_interp_end
+        return
+    end subroutine horiz_interp_end
 
-! <SUBROUTINE NAME="horiz_interp_base_2d" INTERFACE="horiz_interp">
-!   <IN NAME="Interp" TYPE="type(horiz_interp_type)"> </IN>
-!   <IN NAME="data_in" TYPE="real" DIM="(:,:),(:,:,:)"> </IN>
-!   <IN NAME="lon_in, lat_in" TYPE="real" DIM="(:),(:,:)"> </IN>
-!   <IN NAME="lon_out, lat_out" TYPE="real" DIM="(:),(:,:)"> </IN>
-!   <IN NAME="missing_value" TYPE="integer, optional" > </IN>
-!   <IN NAME="missing_permit" TYPE="integer,optional" > </IN>
-!   <IN NAME="verbose" TYPE="integer,optional"> </IN>
-!   <IN NAME="mask_in" TYPE="real,optional" DIM="(:,:),(:,:,:)"> </IN>
-!   <OUT NAME="data_out" TYPE="real" DIM="(:,:),(:,:,:)"> </OUT>
-!   <OUT NAME="mask_out" TYPE="real,optional" DIM="(:,:),(:,:,:)"> </OUT>
+    function is_lat_lon(lon, lat)
 
- subroutine horiz_interp_base_2d ( Interp, data_in, data_out, verbose, &
-                                   mask_in, mask_out, missing_value, missing_permit, &
-                                   err_msg, new_missing_handle )
+        real, dimension(:,:), intent(in) :: lon, lat
+        logical                          :: is_lat_lon
+        integer                          :: i, j, nlon, nlat, num
 
-   type (horiz_interp_type), intent(in) :: Interp
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-      real, intent(in),                   optional :: missing_value
-      integer, intent(in),                optional :: missing_permit
-   character(len=*), intent(out),         optional :: err_msg
-      logical, intent(in),                optional :: new_missing_handle
-
-   if(present(err_msg)) err_msg = ''
-   if(.not.Interp%I_am_initialized) then
-     if(fms_error_handler('horiz_interp','The horiz_interp_type variable is not initialized',err_msg)) return
-   endif
-
-   select case(Interp%interp_method)
-   case(CONSERVE)
-      call horiz_interp_conserve(Interp,data_in, data_out, verbose, mask_in, mask_out)
-   case(BILINEAR)
-      call horiz_interp_bilinear(Interp,data_in, data_out, verbose, mask_in, mask_out, &
-                             missing_value, missing_permit, new_missing_handle )
-   case(BICUBIC)
-      call horiz_interp_bicubic(Interp,data_in, data_out, verbose, mask_in, mask_out, &
-                             missing_value, missing_permit )
-   case(SPHERICA)
-      call horiz_interp_spherical(Interp,data_in, data_out, verbose, mask_in, mask_out, &
-                             missing_value )
-   case default
-      call mpp_error(FATAL,'interp_method should be conservative, bilinear, bicubic, spherical')
-   end select
-
-   return
-
- end subroutine horiz_interp_base_2d
-! </SUBROUTINE>
-
- subroutine horiz_interp_base_3d ( Interp, data_in, data_out, verbose, mask_in, mask_out, &
-      missing_value, missing_permit, err_msg  )
-   !-----------------------------------------------------------------------
-   !   overload of interface horiz_interp_base_2d
-   !   uses 3d arrays for data and mask
-   !   this allows for multiple interpolations with one call
-   !-----------------------------------------------------------------------
-   type (horiz_interp_type), intent(in)           :: Interp
-   real, intent(in),  dimension(:,:,:)            :: data_in
-   real, intent(out), dimension(:,:,:)            :: data_out
-   integer, intent(in),                  optional :: verbose
-   real, intent(in),   dimension(:,:,:), optional :: mask_in
-   real, intent(out),  dimension(:,:,:), optional :: mask_out
-   real, intent(in),                     optional :: missing_value
-   integer, intent(in),                  optional :: missing_permit
-   character(len=*), intent(out),        optional :: err_msg
-
-   integer :: n
-
-   if(present(err_msg)) err_msg = ''
-   if(.not.Interp%I_am_initialized) then
-     if(fms_error_handler('horiz_interp','The horiz_interp_type variable is not initialized',err_msg)) return
-   endif
-
-   do n = 1, size(data_in,3)
-      if (present(mask_in))then
-         if(present(mask_out)) then
-            call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), &
-                 verbose, mask_in(:,:,n), mask_out(:,:,n), &
-                 missing_value, missing_permit )
-         else
-            call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), &
-                 verbose, mask_in(:,:,n), missing_value = missing_value,  &
-                 missing_permit = missing_permit )
-         endif
-      else
-         if(present(mask_out)) then
-            call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), &
-                 verbose, mask_out=mask_out(:,:,n), missing_value = missing_value,  &
-                 missing_permit = missing_permit )
-         else
-            call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), &
-                 verbose, missing_value = missing_value,  &
-                 missing_permit = missing_permit )
-         endif
-     endif
-   enddo
-
-   return
-
- end subroutine horiz_interp_base_3d
-
- !<PUBLICROUTINE INTERFACE="horiz_interp">
- subroutine horiz_interp_solo_1d ( data_in, lon_in, lat_in, lon_out, lat_out,    &
-                                   data_out, verbose, mask_in, mask_out,         &
-                                   interp_method, missing_value, missing_permit, &
-                                   num_nbrs, max_dist,src_modulo, grid_at_center  )
-!</PUBLICROUTINE>
-!-----------------------------------------------------------------------
-!   interpolates from a rectangular grid to rectangular grid.
-!   interp_method can be the value conservative, bilinear or spherical.
-!   horiz_interp_new don't need to be called before calling this routine.
-!-----------------------------------------------------------------------
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(in),  dimension(:)   :: lon_in , lat_in
-      real, intent(in),  dimension(:)   :: lon_out, lat_out
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-   character(len=*), intent(in),          optional :: interp_method
-      real, intent(in),                   optional :: missing_value
-   integer, intent(in),                   optional :: missing_permit
-   integer, intent(in),                   optional :: num_nbrs
-      real, intent(in),                   optional :: max_dist
-   logical, intent(in),                   optional :: src_modulo
-   logical, intent(in),                   optional :: grid_at_center
-    type (horiz_interp_type) :: Interp
-    call horiz_interp_init
-
-    call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                             interp_method, num_nbrs, max_dist, src_modulo, grid_at_center )
-
-    call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                        mask_in, mask_out, missing_value, missing_permit )
-
-    call horiz_interp_del ( Interp )
-!-----------------------------------------------------------------------
-
- end subroutine horiz_interp_solo_1d
-
-!#######################################################################
-
- subroutine horiz_interp_solo_1d_src ( data_in, lon_in, lat_in, lon_out, lat_out,    &
-                                       data_out, verbose, mask_in, mask_out,         &
-                                       interp_method, missing_value, missing_permit, &
-                                       num_nbrs, max_dist, src_modulo, grid_at_center )
-!-----------------------------------------------------------------------
-!
-!   interpolates from a uniformly spaced grid to any output grid.
-!   interp_method can be the value "onservative","bilinear" or "spherical".
-!   horiz_interp_new don't need to be called before calling this routine.
-!
-!-----------------------------------------------------------------------
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(in),  dimension(:)   :: lon_in , lat_in
-      real, intent(in),  dimension(:,:) :: lon_out, lat_out
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-   character(len=*), intent(in),          optional :: interp_method
-      real, intent(in),                   optional :: missing_value
-   integer, intent(in),                   optional :: missing_permit
-   integer, intent(in),                   optional :: num_nbrs
-      real, intent(in),                   optional :: max_dist
-   logical, intent(in),                   optional :: src_modulo
-   logical, intent(in),                   optional :: grid_at_center
-
-   type (horiz_interp_type) :: Interp
-   logical                  :: dst_is_latlon
-   character(len=128)       :: method
-
-    call horiz_interp_init
-    method = 'conservative'
-    if(present(interp_method)) method = interp_method
-    dst_is_latlon = .true.
-    if(trim(method) == 'conservative') dst_is_latlon = is_lat_lon(lon_out, lat_out)
-
-    if(dst_is_latlon) then
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               grid_at_center, is_latlon_out = dst_is_latlon )
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           mask_in, mask_out, missing_value, missing_permit )
-    else
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               grid_at_center, mask_in, mask_out, is_latlon_out = dst_is_latlon)
-
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           missing_value=missing_value, missing_permit=missing_permit )
-    end if
-
-    call horiz_interp_del ( Interp )
-
- end subroutine horiz_interp_solo_1d_src
-
-
- subroutine horiz_interp_solo_2d ( data_in, lon_in, lat_in, lon_out, lat_out, data_out, &
-                                   verbose, mask_in, mask_out, interp_method, missing_value,&
-                                   missing_permit, num_nbrs, max_dist, src_modulo  )
-!-----------------------------------------------------------------------
-!   interpolates from any grid to any grid. interp_method should be "spherical"
-!   horiz_interp_new don't need to be called before calling this routine.
-!-----------------------------------------------------------------------
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(in),  dimension(:,:) :: lon_in , lat_in
-      real, intent(in),  dimension(:,:) :: lon_out, lat_out
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-   character(len=*), intent(in),          optional :: interp_method
-      real, intent(in),                   optional :: missing_value
-   integer, intent(in),                   optional :: missing_permit
-   integer, intent(in),                   optional :: num_nbrs
-      real, intent(in),                   optional :: max_dist
-   logical, intent(in),                   optional :: src_modulo
-
-   type (horiz_interp_type) :: Interp
-   logical                  :: dst_is_latlon, src_is_latlon
-   character(len=128)       :: method
-
-    call horiz_interp_init
-
-    method = 'conservative'
-    if(present(interp_method)) method = interp_method
-    dst_is_latlon = .true.
-    src_is_latlon = .true.
-    if(trim(method) == 'conservative') then
-       dst_is_latlon = is_lat_lon(lon_out, lat_out)
-       src_is_latlon = is_lat_lon(lon_in, lat_in)
-    end if
-
-    if(dst_is_latlon .and. src_is_latlon) then
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               is_latlon_in=dst_is_latlon, is_latlon_out = dst_is_latlon )
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           mask_in, mask_out, missing_value, missing_permit )
-    else
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               mask_in, mask_out, &
-                               is_latlon_in=dst_is_latlon, is_latlon_out = dst_is_latlon)
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           missing_value=missing_value, missing_permit=missing_permit )
-    end if
-
-    call horiz_interp_del ( Interp )
-
- end subroutine horiz_interp_solo_2d
-
- subroutine horiz_interp_solo_1d_dst ( data_in, lon_in, lat_in, lon_out, lat_out, data_out,    &
-                                       verbose, mask_in, mask_out,interp_method,missing_value, &
-                                       missing_permit,  num_nbrs, max_dist, src_modulo)
-!-----------------------------------------------------------------------
-!   interpolates from any grid to rectangular longitude/latitude grid.
-!   interp_method should be "spherical".
-!   horiz_interp_new don't need to be called before calling this routine.
-!-----------------------------------------------------------------------
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(in),  dimension(:,:) :: lon_in , lat_in
-      real, intent(in),  dimension(:)   :: lon_out, lat_out
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-   character(len=*), intent(in),          optional :: interp_method
-      real, intent(in),                   optional :: missing_value
-   integer, intent(in),                   optional :: missing_permit
-   integer, intent(in),                   optional :: num_nbrs
-      real, intent(in),                   optional :: max_dist
-   logical, intent(in),                   optional :: src_modulo
-
-   type (horiz_interp_type) :: Interp
-   logical                  :: src_is_latlon
-   character(len=128)       :: method
-
-    call horiz_interp_init
-
-    method = 'conservative'
-    if(present(interp_method)) method = interp_method
-    src_is_latlon = .true.
-    if(trim(method) == 'conservative') src_is_latlon = is_lat_lon(lon_in, lat_in)
-
-    if(src_is_latlon) then
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               is_latlon_in = src_is_latlon )
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           mask_in, mask_out, missing_value, missing_permit )
-    else
-       call horiz_interp_new ( Interp, lon_in, lat_in, lon_out, lat_out, verbose, &
-                               interp_method, num_nbrs, max_dist, src_modulo,    &
-                               mask_in, mask_out, is_latlon_in = src_is_latlon)
-
-       call horiz_interp ( Interp, data_in, data_out, verbose,   &
-                           missing_value=missing_value, missing_permit=missing_permit )
-    end if
-
-    call horiz_interp_del ( Interp )
-
- end subroutine horiz_interp_solo_1d_dst
-
- subroutine horiz_interp_solo_old (data_in, wb, sb, dx, dy,  &
-                                   lon_out, lat_out, data_out,  &
-                                   verbose, mask_in, mask_out)
-
-!-----------------------------------------------------------------------
-!       Overloaded version of interface horiz_interp_solo_2
-!
-! input
-!
-!   data_in     Global input data stored from west to east (first dimension),
-!               south to north (second dimension).  [real, dimension(:,:)]
-!
-!   wb          Longitude (in radians) that corresponds to western-most
-!               boundary of grid box i=1 in array data_in.  [real]
-!
-!   sb          Latitude (in radians) that corresponds to southern-most
-!               boundary of grid box j=1 in array data_in.  [real]
-!
-!   dx          Grid spacing (in radians) for the longitude axis (first
-!               dimension) for the input data.  [real]
-!
-!   dy          Grid spacing (in radians) for the latitude axis (second
-!               dimension) for the input data.  [real]
-!
-!   lon_out    The longitude edges (in radians) for output data grid boxes.
-!               The values are for adjacent grid boxes and must increase in
-!               value. If there are MLON grid boxes there must be MLON+1
-!               edge values.  [real, dimension(:)]
-!
-!   lat_out    The latitude edges (in radians) for output data grid boxes.
-!               The values are for adjacent grid boxes and may increase or
-!               decrease in value. If there are NLAT grid boxes there must
-!               be NLAT+1 edge values.  [real, dimension(:)]
-!
-! OUTPUT
-!   data_out    Output data on the output grid defined by grid box
-!               edges: blon_out and blat_out.  [real, dimension(:,:)]
-!
-!-----------------------------------------------------------------------
-      real, intent(in),  dimension(:,:) :: data_in
-      real, intent(in)                  :: wb, sb, dx, dy
-      real, intent(in),  dimension(:)   :: lon_out, lat_out
-      real, intent(out), dimension(:,:) :: data_out
-   integer, intent(in),                   optional :: verbose
-      real, intent(in),   dimension(:,:), optional :: mask_in
-      real, intent(out),  dimension(:,:), optional :: mask_out
-
-     real, dimension(size(data_in,1)+1)  :: blon_in
-     real, dimension(size(data_in,2)+1)  :: blat_in
-     integer :: i, j, nlon_in, nlat_in
-     real    :: tpi
-
-   call horiz_interp_init
-
-   tpi = 2.*pi
-   nlon_in = size(data_in,1)
-   nlat_in = size(data_in,2)
-
-   do i = 1, nlon_in+1
-      blon_in(i) = wb + float(i-1)*dx
-   enddo
-      if (abs(blon_in(nlon_in+1)-blon_in(1)-tpi) < epsilon(blon_in)) &
-              blon_in(nlon_in+1)=blon_in(1)+tpi
-
-   do j = 2, nlat_in
-      blat_in(j) = sb + float(j-1)*dy
-   enddo
-      blat_in(1)         = -0.5*pi
-      blat_in(nlat_in+1) =  0.5*pi
-
-
-   call horiz_interp_solo_1d (data_in, blon_in, blat_in,    &
-                              lon_out, lat_out, data_out,   &
-                              verbose, mask_in, mask_out    )
-
- end subroutine horiz_interp_solo_old
-
-
-! <SUBROUTINE NAME="horiz_interp_end">
-
-!   <OVERVIEW>
-!     Dummy routine.
-!   </OVERVIEW>
-!   <DESCRIPTION>
-!     Dummy routine.
-!   </DESCRIPTION>
-!   <TEMPLATE>
-!     call horiz_interp_end
-!   </TEMPLATE>
-
-! </SUBROUTINE>
-
- subroutine horiz_interp_end
- return
- end subroutine horiz_interp_end
-
- function is_lat_lon(lon, lat)
-    real, dimension(:,:), intent(in) :: lon, lat
-    logical                          :: is_lat_lon
-    integer                          :: i, j, nlon, nlat, num
-
-    is_lat_lon = .true.
-    nlon = size(lon,1)
-    nlat = size(lon,2)
-    LOOP_LAT: do j = 1, nlat
-       do i = 2, nlon
-          if(lat(i,j) .NE. lat(1,j)) then
-             is_lat_lon = .false.
-             exit LOOP_LAT
-          end if
-       end do
-    end do LOOP_LAT
-
-    if(is_lat_lon) then
-       LOOP_LON: do i = 1, nlon
-          do j = 2, nlat
-             if(lon(i,j) .NE. lon(i,1)) then
+        is_lat_lon = .true.
+        nlon = size(lon,1)
+        nlat = size(lon,2)
+        do j = 1, nlat
+        do i = 2, nlon
+            if(lat(i,j) .NE. lat(1,j)) then
                 is_lat_lon = .false.
-                exit LOOP_LON
-             end if
-          end do
-       end do LOOP_LON
-    end if
+                exit
+            end if
+        end do
+        end do
 
-    num = 0
-    if(is_lat_lon) num = 1
-    call mpp_min(num)
-    if(num == 1) then
-       is_lat_lon = .true.
-    else
-       is_lat_lon = .false.
-    end if
+        if(is_lat_lon) then
+        do i = 1, nlon
+            do j = 2, nlat
+                if(lon(i,j) .NE. lon(i,1)) then
+                    is_lat_lon = .false.
+                    exit
+                end if
+            end do
+        end do
+        end if
 
-    return
- end function is_lat_lon
+        num = 0
+        if(is_lat_lon) num = 1
+        call mpp_min(num)
+        if(num == 1) then
+            is_lat_lon = .true.
+        else
+            is_lat_lon = .false.
+        end if
+
+        return
+
+    end function is_lat_lon
 
 end module horiz_interp_mod
 

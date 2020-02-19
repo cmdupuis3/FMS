@@ -158,7 +158,7 @@ contains
          'horiz_interp_conservative_new_1dx1d: horiz_interp_conservative_init is not called')
 
     if(great_circle_algorithm) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_1dx1d: great_circle_algorithm is not implemented, contact developer')
+         'horiz_interp_conservative_new_1dx1d: great_circle_algorithm is not implemented, do not contact developer')
 
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
@@ -788,7 +788,7 @@ contains
 
     eps = epsilon(wtsum)
 
-    nlon_in  = Interp%nlon_src;  nlat_in  = Interp%nlat_src
+    nlon_in  = Interp%nlon_src;  nlat_in = Interp%nlat_src
     nlon_out = Interp%nlon_dst; nlat_out = Interp%nlat_dst
 
     if (present(mask_in)) then

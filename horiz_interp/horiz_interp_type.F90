@@ -49,14 +49,17 @@ module horizontal_interpolator_types_mod
         real,    dimension(:),     pointer :: lat_in => NULL()          !< the coordinates of the source grid
     end type baseHZI_t
 
-    type, extends(baseHZI_t) :: conservative1HZI_t
+    type, extends(baseHZI_t) :: conservativeHZI_t
+    end type conservativeHZI_t
+
+    type, extends(conservativeHZI_t) :: conservative1HZI_t
         real,    dimension(:,:), pointer :: faci => NULL()   !< weights
         real,    dimension(:,:), pointer :: facj => NULL()   !< weights
         integer, dimension(:,:), pointer :: ilon => NULL()   !< indices
         integer, dimension(:,:), pointer :: jlat => NULL()   !< indices
     end type conservative1HZI_t
 
-    type, extends(conservative1HZI_t) :: conservative2HZI_t
+    type, extends(conservativeHZI_t) :: conservative2HZI_t
         integer                          :: nxgrid                  !< number of exchange grid between src and dst grid.
         integer, dimension(:),   pointer :: i_src => NULL()         !< indices in source grid.
         integer, dimension(:),   pointer :: j_src => NULL()         !< indices in source grid.
