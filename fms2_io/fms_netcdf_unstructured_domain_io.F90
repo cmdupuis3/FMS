@@ -1,3 +1,22 @@
+!***********************************************************************
+!*                   GNU Lesser General Public License
+!*
+!* This file is part of the GFDL Flexible Modeling System (FMS).
+!*
+!* FMS is free software: you can redistribute it and/or modify it under
+!* the terms of the GNU Lesser General Public License as published by
+!* the Free Software Foundation, either version 3 of the License, or (at
+!* your option) any later version.
+!*
+!* FMS is distributed in the hope that it will be useful, but WITHOUT
+!* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+!* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+!* for more details.
+!*
+!* You should have received a copy of the GNU Lesser General Public
+!* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
+!***********************************************************************
+
 !> @file
 module fms_netcdf_unstructured_domain_io_mod
 use,intrinsic :: iso_fortran_env
@@ -47,7 +66,7 @@ contains
 !> @brief Open a netcdf file that is associated with an unstructured domain.
 !! @return Flag telling if the open completed successfully.
 function open_unstructured_domain_file(fileobj, path, mode, domain, nc_format, &
-                                       is_restart) &
+                                       is_restart, dont_add_res_to_filename) &
   result(success)
 
   type(FmsNetcdfUnstructuredDomainFile_t), intent(inout) :: fileobj !< File object.
@@ -65,6 +84,8 @@ function open_unstructured_domain_file(fileobj, path, mode, domain, nc_format, &
   logical, intent(in), optional :: is_restart !< Flag telling if this file
                                               !! is a restart file.  Defaults
                                               !! to false.
+  logical, intent(in), optional :: dont_add_res_to_filename !< Flag indicating not to add
+                                              !! ".res" to the filename
   logical :: success
 
   type(domainug), pointer :: io_domain
@@ -93,7 +114,7 @@ function open_unstructured_domain_file(fileobj, path, mode, domain, nc_format, &
   success = .false.
   if (string_compare(mode, "read", .true.) .or. string_compare(mode, "append", .true.)) then
     !Only for reading: attempt to open non-distributed files.
-    success = netcdf_file_open(fileobj, buf, mode, nc_format, pelist, is_restart)
+    success = netcdf_file_open(fileobj, buf, mode, nc_format, pelist, is_restart, dont_add_res_to_filename)
   endif
   if (.not. success) then
     !Add the domain tile id to the file name (if necessary).
@@ -104,7 +125,7 @@ function open_unstructured_domain_file(fileobj, path, mode, domain, nc_format, &
     endif
 
     !Open distributed files.
-    success = netcdf_file_open(fileobj, buf, mode, nc_format, pelist, is_restart)
+    success = netcdf_file_open(fileobj, buf, mode, nc_format, pelist, is_restart, dont_add_res_to_filename)
   endif
   deallocate(pelist)
 

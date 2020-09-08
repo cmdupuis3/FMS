@@ -1,3 +1,22 @@
+!***********************************************************************
+!*                   GNU Lesser General Public License
+!*
+!* This file is part of the GFDL Flexible Modeling System (FMS).
+!*
+!* FMS is free software: you can redistribute it and/or modify it under
+!* the terms of the GNU Lesser General Public License as published by
+!* the Free Software Foundation, either version 3 of the License, or (at
+!* your option) any later version.
+!*
+!* FMS is distributed in the hope that it will be useful, but WITHOUT
+!* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+!* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+!* for more details.
+!*
+!* You should have received a copy of the GNU Lesser General Public
+!* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
+!***********************************************************************
+
 subroutine land_compressed_restart_file(nz, nt, debug_flag)
 
   integer, intent(in) :: nz
@@ -78,7 +97,7 @@ subroutine land_compressed_restart_file(nz, nt, debug_flag)
   call register_global_attribute(fileobj, "globalatt2", real(4., kind=real32))
   call register_global_attribute(fileobj, "globalatt3", int(3, kind=int32))
   call register_global_attribute(fileobj, "globalatt4", int(2, kind=int64))
-  call register_global_attribute(fileobj, "globalatt5", "some text")
+  call register_global_attribute(fileobj, "globalatt5", "some text", str_len=len_trim("some text"))
 
   !Add dimensions and corresponding variables to the file.
   !cdim (compressed dimension).
@@ -89,7 +108,7 @@ subroutine land_compressed_restart_file(nz, nt, debug_flag)
     cdim_data(i) = 4.178 + 3.9567*i
   enddo
   call write_data(fileobj, "cdim", cdim_data)
-  call register_variable_attribute(fileobj, "cdim", "units", "compressed value")
+  call register_variable_attribute(fileobj, "cdim", "units", "compressed value", str_len=len_trim("compressed value"))
 
   !Height.
   call register_axis(fileobj, "lev", nz)
@@ -99,11 +118,11 @@ subroutine land_compressed_restart_file(nz, nt, debug_flag)
     lev_data(i) = 0.1111 + 20.236*i
   enddo
   call write_data(fileobj, "lev", lev_data)
-  call register_variable_attribute(fileobj, "lev", "units", "mb")
+  call register_variable_attribute(fileobj, "lev", "units", "mb", str_len=len_trim("mb"))
 
   !Add a restart variable.
   call register_restart_field(fileobj, "temperature", temperature_data, (/"cdim","lev "/))
-  call register_variable_attribute(fileobj, "temperature", "units", "K")
+  call register_variable_attribute(fileobj, "temperature", "units", "K", str_len=len_trim("K"))
 
   !Perform a "simulation".
   do i = 1, nt

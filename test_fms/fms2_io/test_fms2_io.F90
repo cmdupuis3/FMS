@@ -1,4 +1,24 @@
+!***********************************************************************
+!*                   GNU Lesser General Public License
+!*
+!* This file is part of the GFDL Flexible Modeling System (FMS).
+!*
+!* FMS is free software: you can redistribute it and/or modify it under
+!* the terms of the GNU Lesser General Public License as published by
+!* the Free Software Foundation, either version 3 of the License, or (at
+!* your option) any later version.
+!*
+!* FMS is distributed in the hope that it will be useful, but WITHOUT
+!* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+!* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+!* for more details.
+!*
+!* You should have received a copy of the GNU Lesser General Public
+!* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
+!***********************************************************************
+
 program main
+#ifndef use_mpp_io
 use, intrinsic :: iso_fortran_env
 use argparse
 use mpi
@@ -125,6 +145,7 @@ do i = 1,ntiles
 enddo
 ocn_layout = (/1, npes/)
 
+call fms2_io_init()
 !Run tests.
 if (tests(atmos)) then
   if (mod(npes,ntiles) .ne. 0) then
@@ -186,17 +207,6 @@ subroutine mpi_check(err)
   endif
 end subroutine mpi_check
 
-
-subroutine open_check(flag)
-
-  logical, intent(in) :: flag
-
-  if (.not. flag) then
-     call mpp_error(fatal, "Error occured while opening file.")
-  endif
-end subroutine open_check
-
-
 subroutine chksum_match(out_chksum, in_chksum, var_name, debug)
 
   integer(kind=int64), intent(in) :: out_chksum
@@ -225,5 +235,5 @@ subroutine chksum_match(out_chksum, in_chksum, var_name, debug)
   endif
 end subroutine chksum_match
 
-
+#endif
 end program main

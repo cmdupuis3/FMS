@@ -1,3 +1,22 @@
+!***********************************************************************
+!*                   GNU Lesser General Public License
+!*
+!* This file is part of the GFDL Flexible Modeling System (FMS).
+!*
+!* FMS is free software: you can redistribute it and/or modify it under
+!* the terms of the GNU Lesser General Public License as published by
+!* the Free Software Foundation, either version 3 of the License, or (at
+!* your option) any later version.
+!*
+!* FMS is distributed in the hope that it will be useful, but WITHOUT
+!* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+!* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+!* for more details.
+!*
+!* You should have received a copy of the GNU Lesser General Public
+!* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
+!***********************************************************************
+
 !> @file
 
 !> @brief Utility routines.
@@ -29,7 +48,7 @@ public :: open_check
 public :: string_compare
 public :: restart_filepath_mangle
 
-!> @brief A linked list of strings.
+!> @brief A linked list of strings
 type :: char_linked_list
   character(len=128) :: string
   type(char_linked_list), pointer :: head => null()
@@ -173,16 +192,29 @@ end subroutine openmp_thread_trap
 
 
 !> @brief Safely copy a string from one buffer to another.
-subroutine string_copy(dest, source)
+subroutine string_copy(dest, source, check_for_null)
   character(len=*), intent(inout) :: dest !< Destination string.
   character(len=*), intent(in) :: source !< Source string.
+  logical, intent(in), optional :: check_for_null !<Flag indicating to test for null character
 
+  integer :: i
+  logical :: check_null
+
+  check_null = .false.
+  if (present(check_for_null)) check_null = check_for_null
   if (len_trim(source) .gt. len(dest)) then
     call error("The input destination string is not big enough to" &
                  //" to hold the input source string.")
   endif
   dest = ""
   dest = adjustl(trim(source))
+
+  if (check_null) then
+     i = 0
+     i = index(dest, char(0))
+     if (i > 0 ) dest = dest(1:i-1)
+  endif
+
 end subroutine string_copy
 
 
@@ -288,11 +320,11 @@ function has_domain_tile_string(string) &
 
   has_string = .false.
 ! Assigns i to the index where ".tile" starts
-  i = index(trim(string), ".tile", back=.true.) 
+  i = index(trim(string), ".tile", back=.true.)
   if (i .ne. 0) then
     l = len_trim(string)
-! Sets i to the index after .tile 
-    i = i + 5 
+! Sets i to the index after .tile
+    i = i + 5
     j = i
     do while (i .le. l)
 ! If the ith characters is a dot but i not equal to the index after .tile set has_string to true
@@ -359,7 +391,7 @@ end function has_io_domain_tile_string
 
 
 !> @brief Add the I/O domain tile id to an input filepath.
-!! 
+!!
 subroutine io_domain_tile_filepath_mangle(dest, source, io_domain_tile_id)
 
   character(len=*), intent(inout) :: dest !< Output filepath.
@@ -386,7 +418,7 @@ end function has_restart_string
 
 
 !> @brief Add ".res" to an input file path.
-!! 
+!!
 subroutine restart_filepath_mangle(dest, source)
 
   character(len=*), intent(inout) :: dest
@@ -413,7 +445,7 @@ subroutine open_check(flag, fname)
 
   logical, intent(in) :: flag
   character(len=*), intent(in), optional :: fname !< The file name
-  
+
   if (.not. flag) then
      if (present(fname)) then
           call mpp_error(fatal, "Error occured while opening file "//trim(fname))

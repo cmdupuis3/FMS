@@ -1,3 +1,22 @@
+#***********************************************************************
+#*                   GNU Lesser General Public License
+#*
+#* This file is part of the GFDL Flexible Modeling System (FMS).
+#*
+#* FMS is free software: you can redistribute it and/or modify it under
+#* the terms of the GNU Lesser General Public License as published by
+#* the Free Software Foundation, either version 3 of the License, or (at
+#* your option) any later version.
+#*
+#* FMS is distributed in the hope that it will be useful, but WITHOUT
+#* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+#* for more details.
+#*
+#* You should have received a copy of the GNU Lesser General Public
+#* License along with FMS.  If not, see <http://www.gnu.org/licenses/>.
+#***********************************************************************
+
 # This is the main configure file for the FMS package.
 # Ed Hartnett 2/21/2019
 # Seth Underwood 10/2/2019
@@ -6,7 +25,7 @@ AC_PREREQ([2.59])
 
 # Initialize with name, version, and support email address.
 AC_INIT([GFDL FMS Library],
-  [2020.01-dev],
+  [2020.02-dev],
   [gfdl.climate.model.info@noaa.gov],
   [FMS],
   [https://www.gfdl.noaa.gov/fms])
@@ -47,6 +66,32 @@ AC_ARG_ENABLE([setting-flags],
 AS_IF([test ${enable_setting_flags:-yes} = yes],
   [enable_setting_flags=yes],
   [enable_setting_flags=no])
+AC_ARG_ENABLE([mpp-io],
+  [AS_HELP_STRING([--enable-mpp-io],
+    [Compile using mpp-io. Otherwise compiles using fms2_io.])])
+AS_IF([test ${enable_mpp_io:-no} = no],
+  [enable_mpp_io=no],
+  [enable_mpp_io=yes])
+
+# Does the user want to build documentation?
+AC_MSG_CHECKING([whether documentation should be build (requires doxygen)])
+AC_ARG_ENABLE([docs],
+              [AS_HELP_STRING([--enable-docs],
+                              [enable building of documentation with doxygen.])])
+test "x$enable_docs" = xyes || enable_docs=no
+AC_MSG_RESULT([$enable_docs])
+AM_CONDITIONAL(BUILD_DOCS, [test "x$enable_docs" = xyes])
+
+# Is doxygen installed?
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+if test -z "$DOXYGEN" -a "x$enable_docs" = xyes; then
+   AC_MSG_ERROR([Doxygen not found but --enable-docs used.])
+fi
+
+# If building docs, process Doxyfile.in into Doxyfile.
+if test "x$enable_docs" = xyes; then
+   AC_CONFIG_FILES([docs/Doxyfile])
+fi
 
 # Find the C compiler.
 AC_PROG_CC
@@ -77,6 +122,18 @@ fi
 AC_CHECK_HEADERS([netcdf.h], [], [AC_MSG_ERROR([Can't find the netCDF C header file.  Set CPPFLAGS/CFLAGS])])
 AC_SEARCH_LIBS([nc_create], [netcdf], [], [AC_MSG_ERROR([Can't find the netCDF C library.  Set LDFLAGS/LIBS])])
 
+# Require netCDF-4 (with HDF5).
+AC_MSG_CHECKING([if netCDF was built with HDF5])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[
+#include <netcdf_meta.h>
+#if !(NC_HAS_NC4)
+      choke me
+#endif]])], [nc_has_nc4=yes], [nc_has_nc4=no])
+AC_MSG_RESULT([$nc_has_nc4])
+if test $nc_has_nc4 = no; then
+  AC_MSG_ERROR([NetCDF must be built with HDF5.])
+fi
+
 # Check if Linux gettid is avaiable
 AC_CHECK_FUNCS([gettid], [], [])
 
@@ -103,6 +160,9 @@ GX_FORTRAN_SEARCH_LIBS([nf_create], [netcdff], [@%:@include <netcdf.inc>], [iret
   [AC_MSG_ERROR([Can't find the netCDF Fortran library.  Set LDFLAGS/LIBS])])
 GX_FORTRAN_SEARCH_LIBS([nf90_create], [netcdff], [use netcdf], [iret = nf90_create('foo.nc', 1, ncid)], [],
   [AC_MSG_ERROR([Can't find the netCDF Fortran library.  Set LDFLAGS/LIBS])])
+
+# Check if Fortran compiler has the Class, Character array assign bug
+GX_FC_CLASS_CHAR_ARRAY_BUG_CHECK()
 
 # Check if Fortran compiler has Cray pointer support
 GX_FC_CRAY_POINTER_FLAG()
@@ -159,6 +219,11 @@ if test $enable_setting_flags = yes; then
   if test ! -z "$OPENMP_FCFLAGS"; then
     FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
   fi
+
+  # Add mpp io flags
+  if test $enable_mpp_io = yes; then
+    AC_DEFINE([use_mpp_io], [1], [Set to compile using mpp_io])
+  fi
 fi
 
 # Define an AM_CONDITIONAL to determine if you are on a CRAY
@@ -170,6 +235,62 @@ AC_CHECK_PROGS([MPI_LAUNCHER],[srun aprun mpirun])
 # Check if the launcher can oversubscribe the MPI processes
 AS_IF([$MPI_LAUNCHER --oversubscribe hostname >/dev/null 2>&1], \
       [ AC_SUBST([OVERSUBSCRIBE], [--oversubscribe])])
+
+
+# Compiler with version information. This consists of the full path
+# name of the compiler and the reported version number.
+AC_SUBST([CC_VERSION])
+# Strip anything that looks like a flag off of $CC
+CC_NOFLAGS=`echo $CC | sed 's/ -.*//'`
+
+if `echo $CC_NOFLAGS | grep ^/ >/dev/null 2>&1`; then
+  CC_VERSION="$CC"
+else
+  CC_VERSION="$CC";
+  for x in `echo $PATH | sed -e 's/:/ /g'`; do
+    if test -x $x/$CC_NOFLAGS; then
+      CC_VERSION="$x/$CC"
+      break
+    fi
+  done
+fi
+if test -n "$cc_version_info"; then
+  CC_VERSION="$CC_VERSION ( $cc_version_info)"
+fi
+
+AC_SUBST([FC_VERSION])
+# Strip anything that looks like a flag off of $FC
+FC_NOFLAGS=`echo $CC | sed 's/ -.*//'`
+
+if `echo $FC_NOFLAGS | grep ^/ >/dev/null 2>&1`; then
+  FC_VERSION="$FC"
+else
+  FC_VERSION="$FC";
+  for x in `echo $PATH | sed -e 's/:/ /g'`; do
+    if test -x $x/$FC_NOFLAGS; then
+      FC_VERSION="$x/$FC"
+      break
+    fi
+  done
+fi
+if test -n "$fc_version_info"; then
+  FC_VERSION="$FC_VERSION ( $fc_version_info )"
+fi
+
+#####
+# Create output variables from various
+# shell variables, for use in generating
+# libnetcdf.settings.
+#####
+AC_SUBST([enable_shared])
+AC_SUBST([enable_static])
+AC_SUBST([CFLAGS])
+AC_SUBST([CPPFLAGS])
+AC_SUBST([LDFLAGS])
+AC_SUBST([AM_CFLAGS])
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_LDFLAGS])
+AC_SUBST([NOUNDEFINED])
 
 # These files will be created when the configure script is run.
 AC_CONFIG_FILES([Makefile
@@ -207,6 +328,7 @@ AC_CONFIG_FILES([Makefile
         sat_vapor_pres/Makefile
         random_numbers/Makefile
         libFMS/Makefile
+	docs/Makefile
         test_fms/test_common.sh
         test_fms/Makefile
         test_fms/diag_manager/Makefile
