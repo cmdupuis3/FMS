@@ -698,7 +698,7 @@ contains
 
     end function hzi_new_spherical_2dx2d
 
-    subroutine hzi_new_spherical_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
+    function hzi_new_spherical_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
 
         type(sphericalHZI_t) :: Interp
         real, intent(in), dimension(:,:) :: lon_in , lat_in
@@ -724,7 +724,7 @@ contains
         call horiz_interp_spherical_new ( Interp, lon_in, lat_in, lon_dst, lat_dst, num_nbrs, max_dist, src_modulo)
         deallocate(lon_dst,lat_dst)
 
-    end subroutine hzi_new_spherical_2dx1d
+    end function hzi_new_spherical_2dx1d
 
 
 
@@ -751,8 +751,6 @@ contains
         type is (sphericalHZI_t)
             call horiz_interp_spherical    (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value )
         end select
-
-        return
 
     end function horiz_interp_base_2d
 
@@ -788,8 +786,6 @@ contains
                 endif
             endif
         enddo
-
-        return
 
     end function horiz_interp_base_3d
 

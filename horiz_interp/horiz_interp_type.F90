@@ -49,7 +49,7 @@ module horizontal_interpolator_types_mod
         real,    dimension(:),     pointer :: lat_in => NULL()          !< the coordinates of the source grid
     end type baseHZI_t
 
-    type, extends(baseHZI_t) :: conservativeHZI_t
+    type, abstract extends(baseHZI_t) :: conservativeHZI_t
     end type conservativeHZI_t
 
     type, extends(conservativeHZI_t) :: conservative1HZI_t
@@ -93,7 +93,7 @@ module horizontal_interpolator_types_mod
 
     public :: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
     public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
-    public :: baseHZI_t, assignment(=)
+    public :: baseHZI_t, conservativeHZI_t, assignment(=)
 
 contains
 
