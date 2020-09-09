@@ -38,7 +38,6 @@ module horiz_interp_mod
     use mpp_mod,                    only: mpp_error, FATAL, stdout, stdlog, mpp_min
     use mpp_mod,                    only: input_nml_file, WARNING, mpp_pe, mpp_root_pe
     use constants_mod,              only: pi
-    use horizontal_interpolator_types_mod,      only: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
     use horizontal_interpolator_types_mod,      only: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
     use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t, assignment(=)
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve

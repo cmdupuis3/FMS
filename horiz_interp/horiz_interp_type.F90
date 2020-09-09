@@ -23,15 +23,6 @@ module horizontal_interpolator_types_mod
     implicit none
     private
 
-    ! Oh, how I wish Fortran enums worked like in normal languages...
-    enum, bind(C)
-        enumerator CONSERVATIVE_1
-        enumerator CONSERVATIVE_2
-        enumerator BILINEAR
-        enumerator SPHERICAL
-        enumerator BICUBIC
-    end enum
-
     type, abstract :: baseHZI_t
         real,    dimension(:,:),   pointer :: area_src => NULL()        !< area of the source grid
         real,    dimension(:,:),   pointer :: area_dst => NULL()        !< area of the destination grid
@@ -91,7 +82,6 @@ module horizontal_interpolator_types_mod
         module procedure hzi_type_eq_bicubic
     end interface
 
-    public :: CONSERVATIVE_1,     CONSERVATIVE_2,     BILINEAR,      SPHERICAL,      BICUBIC
     public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
     public :: baseHZI_t, conservativeHZI_t, assignment(=)
 
