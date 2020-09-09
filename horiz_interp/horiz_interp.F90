@@ -39,7 +39,7 @@ module horiz_interp_mod
     use mpp_mod,                    only: input_nml_file, WARNING, mpp_pe, mpp_root_pe
     use constants_mod,              only: pi
     use horizontal_interpolator_types_mod,      only: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
-    use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t, assignment(=)
+    use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t
 
     use horizontal_interpolator_conservative_mod,  only: hzi_conservative_init, hzi_conservative
     use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative11, hzi_delete_conservative2
@@ -55,7 +55,7 @@ module horiz_interp_mod
     implicit none
     private
 
-    public :: horiz_interp_type, horiz_interp, horiz_interp_new, horiz_interp_del, horiz_interp_init, horiz_interp_end, assignment(=)
+    public :: horiz_interp_type, horiz_interp, horiz_interp_new, horiz_interp_del, horiz_interp_init, horiz_interp_end
 
 ! <INTERFACE NAME="horiz_interp_new">
 !   <OVERVIEW>
