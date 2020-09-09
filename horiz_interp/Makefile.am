@@ -56,16 +56,16 @@ horiz_interp_mod.mod: horiz_interp.lo
 # Some mods are dependant on other mods in this dir.
 horiz_interp_bicubic.lo: horiz_interp_type_mod.mod
 horiz_interp_bilinear.lo: horiz_interp_type_mod.mod	\
-horiz_interp_stats.mod
+horiz_interp_stats_mod.mod
 horiz_interp_conserve.lo: horiz_interp_type_mod.mod	\
-horiz_interp_stats.mod
+horiz_interp_stats_mod.mod
 horiz_interp_spherical.lo: horiz_interp_type_mod.mod
 horiz_interp.lo: horiz_interp_bicubic_mod.mod			\
 horiz_interp_type_mod.mod horiz_interp_bilinear_mod.mod		\
 horiz_interp_conserve_mod.mod horiz_interp_spherical_mod.mod
 
 # Mod files are built and then installed as headers.
-MODFILES = horiz_interp_stats.mod horiz_interp_type_mod.mod \
+MODFILES = horiz_interp_stats_mod.mod horiz_interp_type_mod.mod \
 horiz_interp_bicubic_mod.mod	\
 horiz_interp_bilinear_mod.mod horiz_interp_conserve_mod.mod		\
 horiz_interp_spherical_mod.mod horiz_interp_mod.mod
