@@ -43,9 +43,7 @@ module horiz_interp_mod
     use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t, assignment(=)
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conservative_new_1dx1d, horiz_interp_conservative_new_1dx2d
-    use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
     use horizontal_interpolator_conservative_mod,  only: horiz_interp_conservative_new_2dx1d, horiz_interp_conservative_new_2dx2d
-    use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
     use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative1, hzi_delete_conservative2
     use horizontal_interpolator_bilinear_mod,  only: horiz_interp_bilinear_init, horiz_interp_bilinear
     use horizontal_interpolator_bilinear_mod,  only: horiz_interp_bilinear_new, hzi_delete_bilinear
@@ -533,13 +531,12 @@ contains
 
     end function hzi_new_bilinear_1dx2d_centered
 
-    function hzi_new_bicubic_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bicubic_1dx1d (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:) :: lon_in , lat_in
         real, intent(in), dimension(:) :: lon_out, lat_out
         integer, intent(in), optional  :: verbose
-        logical, intent(in), optional  :: src_modulo
 
         real, dimension(:), allocatable :: lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d
         integer                         :: i, j, nlon_in, nlat_in, nlon_out, nlat_out
@@ -563,18 +560,17 @@ contains
         do j = 1, nlat_out
             lat_dst_1d(j) = (lat_out(j) + lat_out(j+1)) * 0.5
         enddo
-        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d, verbose, src_modulo)
+        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d, verbose)
         deallocate(lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d)
 
     end function hzi_new_bicubic_1dx1d
 
-    function hzi_new_bicubic_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bicubic_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:)   :: lon_in , lat_in
         real, intent(in), dimension(:,:) :: lon_out, lat_out
         integer, intent(in), optional    :: verbose
-        logical, intent(in), optional    :: src_modulo
 
         real, dimension(:),   allocatable :: lon_src_1d, lat_src_1d
         integer                           :: i, j, nlon_in, nlat_in
@@ -589,36 +585,34 @@ contains
         do j = 1, nlat_in
             lat_src_1d(j) = (lat_in(j) + lat_in(j+1)) * 0.5
         enddo
-        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose, src_modulo)
+        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose)
         deallocate(lon_src_1d,lat_src_1d)
 
     end function hzi_new_bicubic_1dx2d
 
-    function hzi_new_bicubic_1dx1d_centered (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bicubic_1dx1d_centered (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:) :: lon_in , lat_in
         real, intent(in), dimension(:) :: lon_out, lat_out
         integer, intent(in), optional  :: verbose
-        logical, intent(in), optional  :: src_modulo
 
         call horiz_interp_init
 
         !No need to expand to 2d, horiz_interp_bicubic_new does 1d-1d
-        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
     end function hzi_new_bicubic_1dx1d_centered
 
-    function hzi_new_bicubic_1dx2d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bicubic_1dx2d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:)   :: lon_in , lat_in
         real, intent(in), dimension(:,:) :: lon_out, lat_out
         integer, intent(in), optional    :: verbose
-        logical, intent(in), optional    :: src_modulo
 
         call horiz_interp_init
-        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
     end function hzi_new_bicubic_1dx2d_centered
 

@@ -120,7 +120,7 @@ module horizontal_interpolator_bicubic_mod
   !      that contains pre-computed interpolation indices and weights.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call hzi_new_bicubic ( Interp, lon_in, lat_in, lon_out, lat_out, verbose_bicubic, src_modulo )
+  !     call hzi_new_bicubic ( Interp, lon_in, lat_in, lon_out, lat_out, verbose_bicubic )
 
   !   </TEMPLATE>
   !
@@ -140,11 +140,6 @@ module horizontal_interpolator_bicubic_mod
   !      Latitude (in radians) for source data grid.
   !   </IN>
 
-  !   <IN NAME="src_modulo" TYPE="logical, optional">
-  !      logical variable to indicate if the boundary condition along zonal boundary
-  !      is cyclic or not. When true, the zonal boundary condition is cyclic.
-  !   </IN>
-
   !   <IN NAME="verbose_bicubic" TYPE="integer, optional" >
   !      flag for the amount of print output.
   !   </IN>
@@ -156,24 +151,20 @@ module horizontal_interpolator_bicubic_mod
   !   </INOUT>
 
   subroutine hzi_new_bicubic_1d_s ( Interp, lon_in, lat_in, lon_out, lat_out, &
-       verbose, src_modulo )
+       verbose )
 
     !-----------------------------------------------------------------------
     type(horiz_interp_type), intent(inout) :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
     integer, intent(in),          optional :: verbose
-    logical, intent(in),          optional :: src_modulo
     integer                                :: i, j, ip1, im1, jp1, jm1
-    logical                                :: src_is_modulo
     integer                                :: nlon_in, nlat_in, nlon_out, nlat_out
     integer                                :: jcl, jcu, icl, icu, jj
     real                                   :: xz, yz
     integer                                :: unit
 
     if(present(verbose)) verbose_bicubic = verbose
-    src_is_modulo = .false.
-    if (present(src_modulo)) src_is_modulo = src_modulo
 
     if(size(lon_out,1) /= size(lat_out,1) .or. size(lon_out,2) /= size(lat_out,2) ) &
          call mpp_error(FATAL,'horiz_interp_bilinear_mod: when using bilinear ' // &
@@ -307,24 +298,20 @@ module horizontal_interpolator_bicubic_mod
   end subroutine hzi_new_bicubic_1d_s
   ! </SUBROUTINE>
   subroutine hzi_new_bicubic_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
-       verbose, src_modulo )
+       verbose )
 
     !-----------------------------------------------------------------------
     type(horiz_interp_type), intent(inout) :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:)        :: lon_out, lat_out
     integer, intent(in),          optional :: verbose
-    logical, intent(in),          optional :: src_modulo
     integer                                :: i, j, ip1, im1, jp1, jm1
-    logical                                :: src_is_modulo
     integer                                :: nlon_in, nlat_in, nlon_out, nlat_out
     integer                                :: jcl, jcu, icl, icu, jj
     real                                   :: xz, yz
     integer                                :: unit
 
     if(present(verbose)) verbose_bicubic = verbose
-    src_is_modulo = .false.
-    if (present(src_modulo)) src_is_modulo = src_modulo
 
     !--- get the grid size
     nlon_in  = size(lon_in) ; nlat_in  = size(lat_in)
