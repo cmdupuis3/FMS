@@ -57,7 +57,7 @@ module horiz_interp_mod
 
     public :: hzi_new_conservative, hzi_new_bilinear, hzi_new_bilinear_centered
     public :: hzi_new_bicubic, hzi_new_bicubic_centered, hzi_new_spherical
-    public :: hzi_interpolate, horiz_interp_del
+    public :: hzi_interpolate, hzi_delete
     public :: horiz_interp_init, horiz_interp_end
 
     public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
