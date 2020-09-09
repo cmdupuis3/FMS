@@ -55,7 +55,12 @@ module horiz_interp_mod
     implicit none
     private
 
-    public :: horiz_interp_type, horiz_interp, horiz_interp_new, horiz_interp_del, horiz_interp_init, horiz_interp_end
+    public :: hzi_new_conservative, hzi_new_bilinear, hzi_new_bilinear_centered
+    public :: hzi_new_bicubic, hzi_new_bicubic_centered, hzi_new_spherical
+    public :: hzi_interpolate, horiz_interp_del
+    public :: horiz_interp_init, horiz_interp_end
+
+    public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
 
 ! <INTERFACE NAME="horiz_interp_new">
 !   <OVERVIEW>
@@ -216,9 +221,9 @@ module horiz_interp_mod
 !      sure you have the correct grid size.
 !   </ERROR>
 
-    interface horiz_interp
-        module procedure horiz_interp_base_2d
-        module procedure horiz_interp_base_3d
+    interface hzi_interpolate
+        module procedure hzi_interpolate_base_2d
+        module procedure hzi_interpolate_base_3d
     end interface
 ! </INTERFACE>
 
@@ -722,7 +727,7 @@ contains
 
 
 
-    function horiz_interp_base_2d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle) result(data_out)
+    function hzi_interpolate_base_2d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle) result(data_out)
 
         type (baseHZI_t), intent(in)                 :: Interp
         real, intent(in),   dimension(:,:)           :: data_in
@@ -737,18 +742,18 @@ contains
         select type(Interp)
         !class is (baseHZI_t)
         type is (conservativeHZI_t)
-            call horiz_interp_conservative (Interp, data_in, data_out, verbose, mask_in, mask_out)
+            call hzi_conservative (Interp, data_in, data_out, verbose, mask_in, mask_out)
         type is (bilinearHZI_t)
-            call horiz_interp_bilinear     (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle )
+            call hzi_bilinear     (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit, new_missing_handle )
         type is (bicubicHZI_t)
-            call horiz_interp_bicubic      (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit)
+            call hzi_bicubic      (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value, missing_permit)
         type is (sphericalHZI_t)
-            call horiz_interp_spherical    (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value )
+            call hzi_spherical    (Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value )
         end select
 
-    end function horiz_interp_base_2d
+    end function hzi_interpolate_base_2d
 
-    function horiz_interp_base_3d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit) result(data_out)
+    function hzi_interpolate_base_3d (Interp, data_in, verbose, mask_in, mask_out, missing_value, missing_permit) result(data_out)
 
         type (baseHZI_t), intent(in)                   :: Interp
         real, intent(in),   dimension(:,:,:)           :: data_in
@@ -764,24 +769,24 @@ contains
         do n = 1, size(data_in,3)
             if (present(mask_in))
                 if(present(mask_out)) then
-                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
                         mask_in = mask_in(:,:,n), mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
                 else
-                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
                         mask_in = mask_in(:,:,n),                             missing_value = missing_value, missing_permit = missing_permit )
                 endif
             else
                 if(present(mask_out)) then
-                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
                                                   mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
                 else
-                    call horiz_interp_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
                                                                               missing_value = missing_value, missing_permit = missing_permit )
                 endif
             endif
         enddo
 
-    end function horiz_interp_base_3d
+    end function hzi_interpolate_base_3d
 
 
     subroutine horiz_interp_end
