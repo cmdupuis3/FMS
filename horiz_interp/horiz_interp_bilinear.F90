@@ -44,14 +44,8 @@ module horizontal_interpolator_bilinear_mod
   private
 
 
-  public :: hzi_new_bilinear, horiz_interp_bilinear, hzi_delete_bilinear
-  public :: horiz_interp_bilinear_init
-
-  !--- public interface
-  interface hzi_new_bilinear
-    module procedure hzi_new_bilinear_1d
-    module procedure hzi_new_bilinear_2d
-  end interface
+  public :: hzi_new_bilinear_1d, hzi_new_bilinear_2d, hzi_bilinear, hzi_delete_bilinear
+  public :: hzi_bilinear_init
 
 
   real, parameter :: epsln=1.e-10
@@ -63,19 +57,19 @@ module horizontal_interpolator_bilinear_mod
 
 contains
 
-  subroutine horiz_interp_bilinear_init
+  subroutine hzi_bilinear_init
 
     if(module_is_initialized) return
     call write_version_number("HORIZ_INTERP_BILINEAR_MOD", version)
     module_is_initialized = .true.
 
-  end subroutine horiz_interp_bilinear_init
+  end subroutine hzi_bilinear_init
 
 
   subroutine hzi_new_bilinear_1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo )
 
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bilinearHZI_t), intent(inout)     :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
     integer, intent(in),          optional :: verbose
@@ -261,7 +255,7 @@ contains
   !      flag for the amount of print output.
   !   </IN>
 
-  !   <INOUT NAME="Interp" TYPE="type(horiz_interp_type)" >
+  !   <INOUT NAME="Interp" TYPE="type(bilinearHZI_t)" >
   !      A derived-type variable containing indices and weights used for subsequent
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
@@ -270,7 +264,7 @@ contains
   subroutine hzi_new_bilinear_2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
        verbose, src_modulo, new_search, no_crash_when_not_found )
 
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bilinearHZI_t), intent(inout)     :: Interp
     real, intent(in),  dimension(:,:)      :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
     integer, intent(in),          optional :: verbose
@@ -455,7 +449,7 @@ contains
   ! this routine will search the source grid to fine the grid box that encloses
   ! each destination grid.
   subroutine find_neighbor( Interp, lon_in, lat_in, lon_out, lat_out, src_modulo )
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bilinearHZI_t), intent(inout)     :: Interp
     real, intent(in),       dimension(:,:) :: lon_in , lat_in
     real, intent(in),       dimension(:,:) :: lon_out, lat_out
     logical,                 intent(in)    :: src_modulo
@@ -732,7 +726,7 @@ contains
   ! this routine will search the source grid to fine the grid box that encloses
   ! each destination grid.
   subroutine find_neighbor_new( Interp, lon_in, lat_in, lon_out, lat_out, src_modulo, no_crash )
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bilinearHZI_t), intent(inout)     :: Interp
     real, intent(in),       dimension(:,:) :: lon_in , lat_in
     real, intent(in),       dimension(:,:) :: lon_out, lat_out
     logical,                 intent(in)    :: src_modulo, no_crash
@@ -941,7 +935,7 @@ contains
   end function intersect
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_bilinear">
+  ! <SUBROUTINE NAME="hzi_bilinear">
 
   !   <OVERVIEW>
   !      Subroutine for performing the horizontal interpolation between two grids.
@@ -951,10 +945,10 @@ contains
   !     hzi_new_bilinear must be called before calling this routine.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, missing_value, missing_permit)
+  !     call hzi_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, missing_value, missing_permit)
   !   </TEMPLATE>
   !
-  !   <IN NAME="Interp" TYPE="type(horiz_interp_type)">
+  !   <IN NAME="Interp" TYPE="type(bilinearHZI_t)">
   !     Derived-type variable containing interpolation indices and weights.
   !     Returned by a previous call to hzi_new_bilinear.
   !   </IN>
@@ -986,10 +980,10 @@ contains
   !      Output mask that specifies whether data was computed.
   !   </OUT>
 
-  subroutine horiz_interp_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, &
+  subroutine hzi_bilinear ( Interp, data_in, data_out, verbose, mask_in,mask_out, &
        missing_value, missing_permit, new_handle_missing )
 
-    type (horiz_interp_type), intent(in)        :: Interp
+    type (bilinearHZI_t), intent(in)            :: Interp
     real, intent(in),  dimension(:,:)           :: data_in
     real, intent(out), dimension(:,:)           :: data_out
     integer, intent(in),               optional :: verbose
@@ -1285,23 +1279,23 @@ contains
 
     return
 
-  end subroutine horiz_interp_bilinear
+  end subroutine hzi_bilinear
 
-  ! <SUBROUTINE NAME="horiz_interp_bilinear_del">
+  ! <SUBROUTINE NAME="hzi_delete_bilinear">
 
   !   <OVERVIEW>
-  !     Deallocates memory used by "horiz_interp_type" variables.
+  !     Deallocates memory used by "bilinearHZI_t" variables.
   !     Must be called before reinitializing with hzi_new_bilinear.
   !   </OVERVIEW>
   !   <DESCRIPTION>
-  !     Deallocates memory used by "horiz_interp_type" variables.
+  !     Deallocates memory used by "bilinearHZI_t" variables.
   !     Must be called before reinitializing with hzi_new_bilinear.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_bilinear_del ( Interp )
+  !     call hzi_delete_bilinear ( Interp )
   !   </TEMPLATE>
 
-  !   <INOUT NAME="Interp" TYPE="horiz_interp_type">
+  !   <INOUT NAME="Interp" TYPE="bilinearHZI_t">
   !     A derived-type variable returned by previous call
   !     to hzi_new_bilinear. The input variable must have
   !     allocated arrays. The returned variable will contain

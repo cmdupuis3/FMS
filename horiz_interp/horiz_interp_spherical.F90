@@ -48,8 +48,8 @@ module horizontal_interpolator_spherical_mod
   private
 
 
-  public :: horiz_interp_spherical_new, horiz_interp_spherical, hzi_delete_spherical
-  public :: horiz_interp_spherical_init, horiz_interp_spherical_wght
+  public :: hzi_spherical_new, hzi_spherical, hzi_delete_spherical
+  public :: hzi_spherical_init, hzi_spherical_wght
 
   integer, parameter :: max_neighbors = 400
   real,    parameter :: max_dist_default = 0.1  ! radians
@@ -84,7 +84,7 @@ module horizontal_interpolator_spherical_mod
 
 contains
 
-  subroutine horiz_interp_spherical_init
+  subroutine hzi_spherical_init
     integer :: unit, ierr, io
 
 
@@ -95,12 +95,12 @@ contains
 
     module_is_initialized = .true.
 
-   end subroutine horiz_interp_spherical_init
+   end subroutine hzi_spherical_init
 
   !  </SUBROUTINE>
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_spherical_new">
+  ! <SUBROUTINE NAME="hzi_spherical_new">
 
   !   <OVERVIEW>
   !      Initialization routine.
@@ -146,15 +146,15 @@ contains
   !      is cyclic or not. When true, the zonal boundary condition is cyclic.
   !   </IN>
 
-  !   <INOUT NAME="Interp" TYPE="type(horiz_interp_type)">
+  !   <INOUT NAME="Interp" TYPE="type(sphericalHZI_t)">
   !      A derived-type variable containing indices and weights used for subsequent
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
 
-  subroutine horiz_interp_spherical_new(Interp, lon_in,lat_in,lon_out,lat_out, &
+  subroutine hzi_spherical_new(Interp, lon_in,lat_in,lon_out,lat_out, &
        num_nbrs, max_dist, src_modulo)
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(sphericalHZI_t),    intent(inout) :: Interp
     real, intent(in),       dimension(:,:) :: lon_in, lat_in, lon_out, lat_out
     integer, intent(in),        optional   :: num_nbrs
     real, optional,             intent(in) :: max_dist
@@ -299,26 +299,26 @@ contains
 
     return
 
-  end subroutine horiz_interp_spherical_new
+  end subroutine hzi_spherical_new
   ! </SUBROUTINE>
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_spherical">
+  ! <SUBROUTINE NAME="hzi_spherical">
 
   !   <OVERVIEW>
   !      Subroutine for performing the horizontal interpolation between two grids.
   !   </OVERVIEW>
   !   <DESCRIPTION>
   !     Subroutine for performing the horizontal interpolation between two grids.
-  !     horiz_interp_spherical_new must be called before calling this routine.
+  !     hzi_spherical_new must be called before calling this routine.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_spherical( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
+  !     call hzi_spherical( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
   !   </TEMPLATE>
   !
-  !   <IN NAME="Interp" TYPE="type(horiz_interp_type)">
+  !   <IN NAME="Interp" TYPE="type(sphericalHZI_t)">
   !     Derived-type variable containing interpolation indices and weights.
-  !     Returned by a previous call to horiz_interp_spherical_new.
+  !     Returned by a previous call to hzi_spherical_new.
   !   </IN>
   !   <IN NAME="data_in" TYPE="real, dimension(:,:)">
   !      Input data on source grid.
@@ -342,8 +342,8 @@ contains
   !      Output mask that specifies whether data was computed.
   !   </OUT>
 
-  subroutine horiz_interp_spherical( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
-    type (horiz_interp_type), intent(in)        :: Interp
+  subroutine hzi_spherical( Interp, data_in, data_out, verbose, mask_in, mask_out, missing_value)
+    type (sphericalHZI_t), intent(in)        :: Interp
     real, intent(in),  dimension(:,:)           :: data_in
     real, intent(out), dimension(:,:)           :: data_out
     integer, intent(in),               optional :: verbose
@@ -469,10 +469,10 @@ contains
     endif
 
     return
-  end subroutine horiz_interp_spherical
+  end subroutine hzi_spherical
 
-  subroutine horiz_interp_spherical_wght( Interp, wt, verbose, mask_in, mask_out, missing_value)
-    type (horiz_interp_type), intent(in)        :: Interp
+  subroutine hzi_spherical_wght( Interp, wt, verbose, mask_in, mask_out, missing_value)
+    type (sphericalHZI_t), intent(in)        :: Interp
     real, intent(out), dimension(:,:,:)         :: wt
     integer, intent(in),               optional :: verbose
     real, intent(in), dimension(:,:),  optional :: mask_in
@@ -549,25 +549,25 @@ contains
     enddo
 
     return
-  end subroutine horiz_interp_spherical_wght
+  end subroutine hzi_spherical_wght
   ! </SUBROUTINE>
 
   !#######################################################################
-  ! <SUBROUTINE NAME="horiz_interp_spherical_del">
+  ! <SUBROUTINE NAME="hzi_delete_spherical">
 
   !   <OVERVIEW>
-  !     Deallocates memory used by "horiz_interp_type" variables.
+  !     Deallocates memory used by "sphericalHZI_t" variables.
   !     Must be called before reinitializing with horiz_interp_spherical_new.
   !   </OVERVIEW>
   !   <DESCRIPTION>
-  !     Deallocates memory used by "horiz_interp_type" variables.
+  !     Deallocates memory used by "sphericalHZI_t" variables.
   !     Must be called before reinitializing with horiz_interp_spherical_new.
   !   </DESCRIPTION>
   !   <TEMPLATE>
-  !     call horiz_interp_spherical_del ( Interp )
+  !     call hzi_delete_spherical ( Interp )
   !   </TEMPLATE>
 
-  !   <INOUT NAME="Interp" TYPE="horiz_interp_type">
+  !   <INOUT NAME="Interp" TYPE="sphericalHZI_t">
   !     A derived-type variable returned by previous call
   !     to horiz_interp_spherical_new. The input variable must have
   !     allocated arrays. The returned variable will contain

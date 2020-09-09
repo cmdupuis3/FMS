@@ -51,13 +51,8 @@ module horizontal_interpolator_bicubic_mod
 
    private
 
-   public  :: hzi_bicubic, hzi_new_bicubic, hzi_delete_bicubic, fill_xy
+   public  :: hzi_bicubic, hzi_new_bicubic_1d, hzi_new_bicubic_1d_s, hzi_delete_bicubic, fill_xy
    public  :: hzi_bicubic_init
-
-  interface hzi_new_bicubic
-    module procedure hzi_new_bicubic_1d
-    module procedure hzi_new_bicubic_1d_s
-  end interface
 
 ! Include variable "version" to be written to log file.
 #include<file_version.h>
@@ -144,7 +139,7 @@ module horizontal_interpolator_bicubic_mod
   !      flag for the amount of print output.
   !   </IN>
 
-  !   <INOUT NAME="Interp" TYPE="type(horiz_interp_type)" >
+  !   <INOUT NAME="Interp" TYPE="type(bicubicHZI_t)" >
   !      A derived-type variable containing indices and weights used for subsequent
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "hzi_bicubic_del" interface.
@@ -154,7 +149,7 @@ module horizontal_interpolator_bicubic_mod
        verbose )
 
     !-----------------------------------------------------------------------
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bicubicHZI_t), intent(inout) :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:,:)      :: lon_out, lat_out
     integer, intent(in),          optional :: verbose
@@ -301,7 +296,7 @@ module horizontal_interpolator_bicubic_mod
        verbose )
 
     !-----------------------------------------------------------------------
-    type(horiz_interp_type), intent(inout) :: Interp
+    type(bicubicHZI_t), intent(inout)      :: Interp
     real, intent(in),  dimension(:)        :: lon_in , lat_in
     real, intent(in),  dimension(:)        :: lon_out, lat_out
     integer, intent(in),          optional :: verbose

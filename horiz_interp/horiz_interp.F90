@@ -40,16 +40,17 @@ module horiz_interp_mod
     use constants_mod,              only: pi
     use horizontal_interpolator_types_mod,      only: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
     use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t, assignment(=)
-    use horizontal_interpolator_conservative_mod,  only: horiz_interp_conserve_init, horiz_interp_conserve
-    use horizontal_interpolator_conservative_mod,  only: horiz_interp_conservative_new_1dx1d, horiz_interp_conservative_new_1dx2d
-    use horizontal_interpolator_conservative_mod,  only: horiz_interp_conservative_new_2dx1d, horiz_interp_conservative_new_2dx2d
-    use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative1, hzi_delete_conservative2
-    use horizontal_interpolator_bilinear_mod,  only: horiz_interp_bilinear_init, horiz_interp_bilinear
-    use horizontal_interpolator_bilinear_mod,  only: horiz_interp_bilinear_new, hzi_delete_bilinear
-    use horizontal_interpolator_bicubic_mod,   only: horiz_interp_bicubic_init, horiz_interp_bicubic
-    use horizontal_interpolator_bicubic_mod,   only: horiz_interp_bicubic_new, hzi_delete_bicubic
-    use horizontal_interpolator_spherical_mod, only: horiz_interp_spherical_init, horiz_interp_spherical
-    use horizontal_interpolator_spherical_mod, only: horiz_interp_spherical_new, hzi_delete_spherical
+
+    use horizontal_interpolator_conservative_mod,  only: hzi_conservative_init, hzi_conservative
+    use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative11, hzi_delete_conservative2
+    use horizontal_interpolator_conservative_mod,  only: hzi_conservative_new_1dx1d, hzi_conservative_new_1dx2d
+    use horizontal_interpolator_conservative_mod,  only: hzi_conservative_new_2dx1d, hzi_conservative_new_1dx2d
+    use horizontal_interpolator_bilinear_mod,  only: hzi_bilinear_init, hzi_bilinear, hzi_delete_bilinear
+    use horizontal_interpolator_bilinear_mod,  only: hzi_new_bilinear_1d, hzi_new_bilinear_2d
+    use horizontal_interpolator_bicubic_mod,   only: hzi_bicubic_init, hzi_bicubic, hzi_delete_bicubic
+    use horizontal_interpolator_bicubic_mod,   only: hzi_new_bicubic_1d, hzi_new_bicubic_1d_s
+    use horizontal_interpolator_spherical_mod, only: hzi_spherical_init, hzi_spherical, hzi_delete_spherical
+    use horizontal_interpolator_spherical_mod, only: hzi_spherical_new
 
     implicit none
     private
@@ -251,10 +252,10 @@ contains
             write (unit, nml=horiz_interp_nml)
         endif
 
-        call horiz_interp_conserve_init
-        call horiz_interp_bilinear_init
-        call horiz_interp_bicubic_init
-        call horiz_interp_spherical_init
+        call hzi_conservative_init
+        call hzi_bilinear_init
+        call hzi_bicubic_init
+        call hzi_spherical_init
 
         module_is_initialized = .true.
 
@@ -268,7 +269,7 @@ contains
         integer, intent(in), optional           :: verbose
 
         call horiz_interp_init
-        call horiz_interp_conservative_new_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+        call hzi_conservative_new_1dx1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
     end function hzi_new_conservative_1dx1d
 
@@ -291,9 +292,9 @@ contains
                 allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
                 Interp%mask_in = mask_in
             end if
-            call horiz_interp_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out(:,1), lat_out(1,:), verbose=verbose)
+            call hzi_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out(:,1), lat_out(1,:), verbose=verbose)
         else
-            call horiz_interp_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call hzi_conservative_new_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         end if
 
     end function hzi_new_conservative_1dx2d
@@ -329,13 +330,13 @@ contains
                 allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
                 Interp%mask_in = mask_in
             end if
-            call horiz_interp_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out(:,1), lat_out(1,:), verbose=verbose)
+            call hzi_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out(:,1), lat_out(1,:), verbose=verbose)
         else if(src_is_latlon .AND. .not. dst_is_latlon) then
-            call horiz_interp_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call hzi_conservative_new_2dx2d (Interp, lon_in(:,1), lat_in(1,:), lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         else if(.not. src_is_latlon .AND. dst_is_latlon) then
-            call horiz_interp_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out(:,1), lat_out(1,:), verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call hzi_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out(:,1), lat_out(1,:), verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         else
-            call horiz_interp_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call hzi_conservative_new_2dx2d (Interp, lon_in,      lat_in,      lon_out,      lat_out,      verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         end if
 
     end function hzi_new_conservative_2dx2d
@@ -378,9 +379,9 @@ contains
                 allocate(Interp%mask_in(size(mask_in,1), size(mask_in,2)) )
                 Interp%mask_in = mask_in
             end if
-            call horiz_interp_conservative_new_2dx1d (Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, verbose=verbose)
+            call hzi_conservative_new_2dx1d (Interp, lon_in(:,1), lat_in(1,:), lon_out, lat_out, verbose=verbose)
         else
-            call horiz_interp_conservative_new_2dx1d (Interp, lon_in,      lat_in,      lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
+            call hzi_conservative_new_2dx1d (Interp, lon_in,      lat_in,      lon_out, lat_out, verbose=verbose, mask_in=mask_in, mask_out=mask_out)
         end if
 
         deallocate(lon_dst,lat_dst)
@@ -419,7 +420,7 @@ contains
         do j = 1, nlat_out
             lat_dst(:,j) = (lat_out(j) + lat_out(j+1)) * 0.5
         enddo
-        call horiz_interp_bilinear_new (Interp, lon_src_1d, lat_src_1d, lon_dst, lat_dst, verbose, src_modulo)
+        call hzi_new_bilinear_1d (Interp, lon_src_1d, lat_src_1d, lon_dst, lat_dst, verbose, src_modulo)
         deallocate(lon_src_1d, lat_src_1d, lon_dst, lat_dst)
 
     end function hzi_new_bilinear_1dx1d
@@ -445,7 +446,7 @@ contains
         do j = 1, nlat_in
             lat_src_1d(j) = (lat_in(j) + lat_in(j+1)) * 0.5
         enddo
-        call horiz_interp_bilinear_new (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose, src_modulo)
+        call hzi_new_bilinear_1d (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose, src_modulo)
         deallocate(lon_src_1d,lat_src_1d)
 
     end function hzi_new_bilinear_1dx2d
@@ -459,7 +460,7 @@ contains
         logical, intent(in), optional    :: src_modulo
 
         call horiz_interp_init
-        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+        call hzi_new_bilinear_2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
 
     end function hzi_new_bilinear_2dx2d
 
@@ -485,7 +486,7 @@ contains
             lat_dst(:,j) = lat_out(j)
         enddo
 
-        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
+        call hzi_new_bilinear_2d (Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
         deallocate(lon_dst,lat_dst)
 
     end function hzi_new_bilinear_2dx1d
@@ -512,7 +513,7 @@ contains
             lat_dst(:,j) = lat_out(j)
         enddo
 
-        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
+        call hzi_new_bilinear_1d (Interp, lon_in, lat_in, lon_dst, lat_dst, verbose, src_modulo)
         deallocate(lon_dst, lat_dst)
 
     end function hzi_new_bilinear_1dx1d_centered
@@ -526,7 +527,7 @@ contains
         logical, intent(in), optional      :: src_modulo
 
         call horiz_interp_init
-        call horiz_interp_bilinear_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
+        call hzi_new_bilinear_1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo)
 
     end function hzi_new_bilinear_1dx2d_centered
 
@@ -559,7 +560,7 @@ contains
         do j = 1, nlat_out
             lat_dst_1d(j) = (lat_out(j) + lat_out(j+1)) * 0.5
         enddo
-        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d, verbose)
+        call hzi_new_bicubic_1d (Interp, lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d, verbose)
         deallocate(lon_src_1d, lat_src_1d, lon_dst_1d, lat_dst_1d)
 
     end function hzi_new_bicubic_1dx1d
@@ -584,7 +585,7 @@ contains
         do j = 1, nlat_in
             lat_src_1d(j) = (lat_in(j) + lat_in(j+1)) * 0.5
         enddo
-        call horiz_interp_bicubic_new (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose)
+        call hzi_new_bicubic_1d_s (Interp, lon_src_1d, lat_src_1d, lon_out, lat_out, verbose)
         deallocate(lon_src_1d,lat_src_1d)
 
     end function hzi_new_bicubic_1dx2d
@@ -599,7 +600,7 @@ contains
         call horiz_interp_init
 
         !No need to expand to 2d, horiz_interp_bicubic_new does 1d-1d
-        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+        call hzi_new_bicubic_1d (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
     end function hzi_new_bicubic_1dx1d_centered
 
@@ -611,7 +612,7 @@ contains
         integer, intent(in), optional    :: verbose
 
         call horiz_interp_init
-        call horiz_interp_bicubic_new (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+        call hzi_new_bicubic_1d_s (Interp, lon_in, lat_in, lon_out, lat_out, verbose)
 
     end function hzi_new_bicubic_1dx2d_centered
 

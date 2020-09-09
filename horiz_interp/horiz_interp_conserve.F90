@@ -95,23 +95,17 @@ module horizontal_interpolator_conservative_mod
   !      interpolations. To reinitialize this variable for a different grid-to-grid
   !      interpolation you must first use the "horiz_interp_del" interface.
   !   </INOUT>
-interface horiz_interp_conserve_new
-     module procedure horiz_interp_conservative_new_1dx1d
-     module procedure horiz_interp_conservative_new_1dx2d
-     module procedure horiz_interp_conservative_new_2dx1d
-     module procedure horiz_interp_conservative_new_2dx2d
+
+interface hzi_conservative
+   module procedure hzi_conservative_version1
+   module procedure hzi_conservative_version2
 end interface
 
-interface horiz_interp_conservative
-   module procedure horiz_interp_conservative_version1
-   module procedure horiz_interp_conservative_version2
-end interface
-
-  public :: horiz_interp_conservative_init
-  public :: horiz_interp_conservative_new_1dx1d, horiz_interp_conservative_new_1dx2d
-  public :: horiz_interp_conservative_new_2dx1d, horiz_interp_conservative_new_2dx2d
-  public :: horiz_interp_conservative
-  public :: hzi_delete_conservative1, hzi_delete_conservative2
+  public :: hzi_conservative_init
+  public :: hzi_conservative_new_1dx1d, hzi_conservative_new_1dx2d
+  public :: hzi_conservative_new_2dx1d, hzi_conservative_new_2dx2d
+  public :: hzi_delete_conservative11, hzi_delete_conservative2
+  public :: hzi_delete_conservative
 
   integer :: pe, root_pe
 
@@ -123,7 +117,7 @@ end interface
 
 contains
 
-  subroutine horiz_interp_conservative_init
+  subroutine hzi_conservative_init
 
     if(module_is_initialized) return
     call write_version_number("HORIZ_INTERP_conservative_MOD", version)
@@ -132,9 +126,9 @@ contains
 
     module_is_initialized = .true.
 
-  end subroutine horiz_interp_conservative_init
+  end subroutine hzi_conservative_init
 
-  subroutine horiz_interp_conservative_new_1dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, verbose)
+  subroutine hzi_conservative_new_1dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, verbose)
     type(conservative1HZI_t), intent(inout) :: Interp
     real, intent(in),        dimension(:)   :: lon_in , lat_in
     real, intent(in),        dimension(:)   :: lon_out, lat_out
@@ -155,10 +149,10 @@ contains
     character(len=64) :: mesg
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_1dx1d: horiz_interp_conservative_init is not called')
+         'hzi_conservative_new_1dx1d: horiz_interp_conservative_init is not called')
 
     if(great_circle_algorithm) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_1dx1d: great_circle_algorithm is not implemented, do not contact developer')
+         'hzi_conservative_new_1dx1d: great_circle_algorithm is not implemented, do not contact developer')
 
     iverbose = 0;  if (present(verbose)) iverbose = verbose
 
@@ -323,9 +317,9 @@ contains
             /,(i4,2i7,2f10.5))
     endif
 
-  end subroutine horiz_interp_conservative_new_1dx1d
+  end subroutine hzi_conservative_new_1dx1d
 
-  subroutine horiz_interp_conservative_new_1dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_conservative_new_1dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
     type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:)   :: lon_in , lat_in
@@ -352,11 +346,11 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_1dx2d: horiz_interp_conservative_init is not called')
+         'hzi_conservative_new_1dx2d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1), one_byte))
     if(wordsz .NE. 4 .AND. wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_1dx2d: wordsz should be 4 or 8')
+         'hzi_conservative_new_1dx2d: wordsz should be 4 or 8')
 
     if( (size(lon_out,1) .NE. size(lat_out,1)) .OR. (size(lon_out,2) .NE. size(lat_out,2)) )  &
         call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_out and lat_out')
@@ -508,9 +502,9 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area )
 
-  end subroutine horiz_interp_conservative_new_1dx2d
+  end subroutine hzi_conservative_new_1dx2d
 
-  subroutine horiz_interp_conservative_new_2dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_conservative_new_2dx1d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
     type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
@@ -530,11 +524,11 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_2dx1d: horiz_interp_conservative_init is not called')
+         'hzi_conservative_new_2dx1d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1,1), one_byte))
     if(wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_2dx1d: currently only support 64-bit real, contact developer')
+         'hzi_conservative_new_2dx1d: currently only support 64-bit real, contact developer')
 
     if( (size(lon_in,1) .NE. size(lat_in,1)) .OR. (size(lon_in,2) .NE. size(lat_in,2)) )  &
         call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_in and lat_in')
@@ -599,9 +593,9 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area)
 
-  end subroutine horiz_interp_conservative_new_2dx1d
+  end subroutine hzi_conservative_new_2dx1d
 
-  subroutine horiz_interp_conservative_new_2dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
+  subroutine hzi_conservative_new_2dx2d ( Interp, lon_in, lat_in, lon_out, lat_out, &
                                                mask_in, mask_out, verbose)
     type(conservative2HZI_t),       intent(inout) :: Interp
     real, intent(in),              dimension(:,:) :: lon_in , lat_in
@@ -623,11 +617,11 @@ contains
     integer(kind=1) :: one_byte(8)
 
     if(.not. module_is_initialized) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_2dx2d: horiz_interp_conservative_init is not called')
+         'hzi_conservative_new_2dx2d: horiz_interp_conservative_init is not called')
 
     wordsz=size(transfer(lon_in(1,1), one_byte))
     if(wordsz .NE. 4 .AND. wordsz .NE. 8) call mpp_error(FATAL, &
-         'horiz_interp_conservative_new_2dx2d: wordsz should be 4 or 8')
+         'hzi_conservative_new_2dx2d: wordsz should be 4 or 8')
 
     if( (size(lon_in,1) .NE. size(lat_in,1)) .OR. (size(lon_in,2) .NE. size(lat_in,2)) )  &
         call mpp_error(FATAL, 'horiz_interp_conservative_mod: size mismatch between lon_in and lat_in')
@@ -712,7 +706,7 @@ contains
 
     deallocate(i_src, j_src, i_dst, j_dst, xgrid_area, dst_area )
 
-  end subroutine horiz_interp_conservative_new_2dx2d
+  end subroutine hzi_conservative_new_2dx2d
 
   !########################################################################
   ! <SUBROUTINE NAME="horiz_interp_conservative">
@@ -759,7 +753,7 @@ contains
   ! </SUBROUTINE>
 
   !##############################################################################
-  subroutine horiz_interp_conservative_version1 ( Interp, data_in, data_out, verbose, &
+  subroutine hzi_conservative_version1 ( Interp, data_in, data_out, verbose, &
        mask_in, mask_out)
 
     type (conservative1HZI_t), intent(in) :: Interp
@@ -907,9 +901,9 @@ contains
 
     endif
 
-  end subroutine horiz_interp_conservative_version1
+  end subroutine hzi_conservative_version1
 
-  subroutine horiz_interp_conservative_version2 ( Interp, data_in, data_out, verbose )
+  subroutine hzi_conservative_version2 ( Interp, data_in, data_out, verbose )
     type (conservative2HZI_t), intent(in) :: Interp
     real,    intent(in),  dimension(:,:) :: data_in
     real,    intent(out), dimension(:,:) :: data_out
@@ -930,7 +924,7 @@ contains
        data_out(i_dst, j_dst) = data_out(i_dst, j_dst) + data_in(i_src,j_src)*Interp%area_frac_dst(i)
     end do
 
-  end subroutine horiz_interp_conservative_version2
+  end subroutine hzi_conservative_version2
 
    subroutine hzi_delete_conservative1 ( Interp )
       type (conservative1HZI_t), intent(inout) :: Interp
