@@ -99,8 +99,8 @@ contains
 
     allocate ( Interp % wti (size(lon_out,1),size(lon_out,2),2),   &
                Interp % wtj (size(lon_out,1),size(lon_out,2),2),   &
-               Interp % i_lon (size(lon_out,1),size(lon_out,2),2), &
-               Interp % j_lat (size(lon_out,1),size(lon_out,2),2))
+               Interp % ilon (size(lon_out,1),size(lon_out,2),2), &
+               Interp % jlat (size(lon_out,1),size(lon_out,2),2))
 
     nlon_in = size(lon_in(:))  ; nlat_in = size(lat_in(:))
     nlon_out = size(lon_out, 1); nlat_out = size(lon_out, 2)
@@ -177,8 +177,8 @@ contains
 
           wtn = 1. - wts
 
-          Interp % i_lon (m,n,1) = is; Interp % i_lon (m,n,2) = ie
-          Interp % j_lat (m,n,1) = js; Interp % j_lat (m,n,2) = je
+          Interp % ilon (m,n,1) = is; Interp % ilon (m,n,2) = ie
+          Interp % jlat (m,n,1) = js; Interp % jlat (m,n,2) = je
           Interp % wti   (m,n,1) = wtw
           Interp % wti   (m,n,2) = wte
           Interp % wtj   (m,n,1) = wts
@@ -310,8 +310,8 @@ contains
 
     allocate ( Interp % wti (size(lon_out,1),size(lon_out,2),2),   &
                Interp % wtj (size(lon_out,1),size(lon_out,2),2),   &
-               Interp % i_lon (size(lon_out,1),size(lon_out,2),2), &
-               Interp % j_lat (size(lon_out,1),size(lon_out,2),2))
+               Interp % ilon (size(lon_out,1),size(lon_out,2),2), &
+               Interp % jlat (size(lon_out,1),size(lon_out,2),2))
 
     !--- first fine the neighbor points for the destination points.
     if(use_new_search) then
@@ -368,8 +368,8 @@ contains
           else if(lon .gt. lon_max) then
              lon = lon - tpi
           endif
-          is = Interp%i_lon(m,n,1); ie = Interp%i_lon(m,n,2)
-          js = Interp%j_lat(m,n,1); je = Interp%j_lat(m,n,2)
+          is = Interp%ilon(m,n,1); ie = Interp%ilon(m,n,2)
+          js = Interp%jlat(m,n,1); je = Interp%jlat(m,n,2)
           if( is == DUMMY) cycle
           lon1 = lon_in(is,js); lat1 = lat_in(is,js);
           lon2 = lon_in(ie,js); lat2 = lat_in(ie,js);
@@ -523,8 +523,8 @@ contains
                          if(lat .le. intersect(lon3,lat3,lon4,lat4,lon))then ! north
                             if(lon .ge. intersect(lat4,lon4,lat1,lon1,lat))then  ! west
                                found = .true.
-                               Interp % i_lon (m,n,1) = i; Interp % i_lon (m,n,2) = ip1
-                               Interp % j_lat (m,n,1) = j; Interp % j_lat (m,n,2) = jp1
+                               Interp % ilon (m,n,1) = i; Interp % ilon (m,n,2) = ip1
+                               Interp % jlat (m,n,1) = j; Interp % jlat (m,n,2) = jp1
                                exit J_LOOP
                             endif
                          endif
@@ -537,11 +537,11 @@ contains
              do while ( .not. found .and. step .lt. max_step )
                 !--- take the adajcent point as the starting point
                 if(m == 1) then
-                   is = Interp % i_lon (m,n-1,1)
-                   js = Interp % j_lat (m,n-1,1)
+                   is = Interp % ilon (m,n-1,1)
+                   js = Interp % jlat (m,n-1,1)
                 else
-                   is = Interp % i_lon (m-1,n,1)
-                   js = Interp % j_lat (m-1,n,1)
+                   is = Interp % ilon (m-1,n,1)
+                   js = Interp % jlat (m-1,n,1)
                 endif
                 if(step==0) then
                    npts = 1
@@ -654,8 +654,8 @@ contains
                             if(lon .ge. intersect(lat4,lon4,lat1,lon1,lat))then ! west
                                found = .true.
                                is=i; js=j
-                               Interp % i_lon (m,n,1) = i; Interp % i_lon (m,n,2) = ip1
-                               Interp % j_lat (m,n,1) = j; Interp % j_lat (m,n,2) = jp1
+                               Interp % ilon (m,n,1) = i; Interp % ilon (m,n,2) = ip1
+                               Interp % jlat (m,n,1) = j; Interp % jlat (m,n,2) = jp1
                                exit
                             endif
                          endif
@@ -812,8 +812,8 @@ contains
                    if(inside_polygon(polyx, polyy, lon, lat)) then
                       found = .true.
 !                      print*, " found ", i, j
-                      Interp % i_lon (m,n,1) = i; Interp % i_lon (m,n,2) = ip1
-                      Interp % j_lat (m,n,1) = j; Interp % j_lat (m,n,2) = jp1
+                      Interp % ilon (m,n,1) = i; Interp % ilon (m,n,2) = ip1
+                      Interp % jlat (m,n,1) = j; Interp % jlat (m,n,2) = jp1
                       exit J_LOOP
                    endif
                 enddo
@@ -823,11 +823,11 @@ contains
              do while ( .not. found .and. step .lt. max_step )
                 !--- take the adajcent point as the starting point
                 if(m == 1) then
-                   is = Interp % i_lon (m,n-1,1)
-                   js = Interp % j_lat (m,n-1,1)
+                   is = Interp % ilon (m,n-1,1)
+                   js = Interp % jlat (m,n-1,1)
                 else
-                   is = Interp % i_lon (m-1,n,1)
-                   js = Interp % j_lat (m-1,n,1)
+                   is = Interp % ilon (m-1,n,1)
+                   js = Interp % jlat (m-1,n,1)
                 endif
                 if(step==0) then
                    npts = 1
@@ -903,8 +903,8 @@ contains
                    polyx(4) = lon_in(i,  jp1); polyy(4) = lat_in(i,  jp1)
                    if(inside_polygon(polyx, polyy, lon, lat)) then
                       found = .true.
-                      Interp % i_lon (m,n,1) = i; Interp % i_lon (m,n,2) = ip1
-                      Interp % j_lat (m,n,1) = j; Interp % j_lat (m,n,2) = jp1
+                      Interp % ilon (m,n,1) = i; Interp % ilon (m,n,2) = ip1
+                      Interp % jlat (m,n,1) = j; Interp % jlat (m,n,2) = jp1
                       exit
                    endif
                 enddo
@@ -913,8 +913,8 @@ contains
           endif
           if(.not.found) then
              if(no_crash) then
-                Interp % i_lon (m,n,1:2) = DUMMY
-                Interp % j_lat (m,n,1:2) = DUMMY
+                Interp % ilon (m,n,1:2) = DUMMY
+                Interp % jlat (m,n,1:2) = DUMMY
                 print*,'lon,lat=',lon,lat ! snz
              else
                 call mpp_error(FATAL, &
@@ -1047,8 +1047,8 @@ contains
             "horiz_interp_bilinear_mod: mask_in should not be present when new_handle_missing is .true.")
        do n = 1, nlat_out
           do m = 1, nlon_out
-             is = Interp % i_lon (m,n,1); ie = Interp % i_lon (m,n,2)
-             js = Interp % j_lat (m,n,1); je = Interp % j_lat (m,n,2)
+             is = Interp % ilon (m,n,1); ie = Interp % ilon (m,n,2)
+             js = Interp % jlat (m,n,1); je = Interp % jlat (m,n,2)
              wtw = Interp % wti   (m,n,1)
              wte = Interp % wti   (m,n,2)
              wts = Interp % wtj   (m,n,1)
@@ -1198,8 +1198,8 @@ contains
     else
        do n = 1, nlat_out
           do m = 1, nlon_out
-             is = Interp % i_lon (m,n,1); ie = Interp % i_lon (m,n,2)
-             js = Interp % j_lat (m,n,1); je = Interp % j_lat (m,n,2)
+             is = Interp % ilon (m,n,1); ie = Interp % ilon (m,n,2)
+             js = Interp % jlat (m,n,1); je = Interp % jlat (m,n,2)
              wtw = Interp % wti   (m,n,1)
              wte = Interp % wti   (m,n,2)
              wts = Interp % wtj   (m,n,1)
@@ -1308,8 +1308,8 @@ contains
 
     if(associated(Interp%wti))   deallocate(Interp%wti)
     if(associated(Interp%wtj))   deallocate(Interp%wtj)
-    if(associated(Interp%i_lon)) deallocate(Interp%i_lon)
-    if(associated(Interp%j_lat)) deallocate(Interp%j_lat)
+    if(associated(Interp%ilon)) deallocate(Interp%ilon)
+    if(associated(Interp%jlat)) deallocate(Interp%jlat)
 
   end subroutine hzi_delete_bilinear
 
@@ -1368,3 +1368,4 @@ contains
   end function indp
 
 end module horizontal_interpolator_bilinear_mod
+

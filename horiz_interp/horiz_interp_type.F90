@@ -23,7 +23,7 @@ module horizontal_interpolator_types_mod
     implicit none
     private
 
-    type, abstract :: baseHZI_t
+    type :: baseHZI_t
         real,    dimension(:,:),   pointer :: area_src => NULL()        !< area of the source grid
         real,    dimension(:,:),   pointer :: area_dst => NULL()        !< area of the destination grid
         real,    dimension(:,:,:), pointer :: src_dist => NULL()        !< distance between destination grid and neighbor source grid.
@@ -40,7 +40,7 @@ module horizontal_interpolator_types_mod
         real,    dimension(:),     pointer :: lat_in => NULL()          !< the coordinates of the source grid
     end type baseHZI_t
 
-    type, abstract extends(baseHZI_t) :: conservativeHZI_t
+    type, extends(baseHZI_t) :: conservativeHZI_t
     end type conservativeHZI_t
 
     type, extends(conservativeHZI_t) :: conservative1HZI_t
@@ -61,8 +61,10 @@ module horizontal_interpolator_types_mod
     end type conservative2HZI_t
 
     type, extends(baseHZI_t) :: bilinearHZI_t
-        real,  dimension(:,:,:), pointer :: wti => NULL() !< weights
-        real,  dimension(:,:,:), pointer :: wtj => NULL() !< weights
+        real,    dimension(:,:,:), pointer :: wti => NULL() !< weights
+        real,    dimension(:,:,:), pointer :: wtj => NULL() !< weights
+        integer, dimension(:,:,:), pointer :: ilon => NULL() !< indices
+        integer, dimension(:,:,:), pointer :: jlat => NULL() !< indices
     end type bilinearHZI_t
 
     type, extends(baseHZI_t) :: sphericalHZI_t
@@ -74,94 +76,9 @@ module horizontal_interpolator_types_mod
         integer, dimension(:,:,:), pointer :: jlat => NULL() !< indices
     end type bicubicHZI_t
 
-    interface assignment(=)
-        module procedure hzi_type_eq_conservative1
-        module procedure hzi_type_eq_conservative2
-        module procedure hzi_type_eq_bilinear
-        module procedure hzi_type_eq_spherical
-        module procedure hzi_type_eq_bicubic
-    end interface
-
     public :: conservative1HZI_t, conservative2HZI_t, bilinearHZI_t, sphericalHZI_t, bicubicHZI_t
-    public :: baseHZI_t, conservativeHZI_t, assignment(=)
+    public :: baseHZI_t, conservativeHZI_t
 
 contains
-
-    subroutine hzi_type_eq(hzi_in, hzi_out)
-        type(baseHZI_t), intent(inout) :: hzi_out
-        type(baseHZI_t), intent(in)    :: hzi_in
-
-        hzi_out%area_src        => hzi_in%area_src
-        hzi_out%area_dst        => hzi_in%area_dst
-        hzi_out%src_dist        => hzi_in%src_dist
-        hzi_out%found_neighbors => hzi_in%found_neighbors
-        hzi_out%max_src_dist    =  hzi_in%max_src_dist
-        hzi_out%num_found       => hzi_in%num_found
-        hzi_out%nlon_src        =  hzi_in%nlon_src
-        hzi_out%nlat_src        =  hzi_in%nlat_src
-        hzi_out%nlon_dst        =  hzi_in%nlon_dst
-        hzi_out%nlat_dst        =  hzi_in%nlat_dst
-        hzi_out%rat_x           => hzi_in%rat_x
-        hzi_out%rat_y           => hzi_in%rat_y
-        hzi_out%lon_in          => hzi_in%lon_in
-        hzi_out%lat_in          => hzi_in%lat_in
-    end subroutine hzi_type_eq
-
-    subroutine hzi_type_eq_conservative1(hzi_in, hzi_out)
-        type(conservative1HZI_t), intent(inout) :: hzi_out
-        type(conservative1HZI_t), intent(in)    :: hzi_in
-
-        call hzi_type_eq(hzi_in, hzi_out)
-
-        hzi_out%faci            => hzi_in%faci
-        hzi_out%facj            => hzi_in%facj
-        hzi_out%ilon            => hzi_in%ilon
-        hzi_out%jlat            => hzi_in%jlat
-    end subroutine hzi_type_eq_conservative1
-
-    subroutine hzi_type_eq_conservative2(hzi_in, hzi_out)
-        type(conservative2HZI_t), intent(inout) :: hzi_out
-        type(conservative2HZI_t), intent(in)    :: hzi_in
-
-        call hzi_type_eq(hzi_in, hzi_out)
-
-        hzi_out%nxgrid          =  hzi_in%nxgrid
-        hzi_out%i_src           => hzi_in%i_src
-        hzi_out%j_src           => hzi_in%j_src
-        hzi_out%i_dst           => hzi_in%i_dst
-        hzi_out%j_dst           => hzi_in%j_dst
-        hzi_out%area_frac_dst   => hzi_in%area_frac_dst
-        !TODO: what about mask? is this a bug?
-    end subroutine hzi_type_eq_conservative2
-
-    subroutine hzi_type_eq_bilinear(hzi_in, hzi_out)
-        type(bilinearHZI_t), intent(inout) :: hzi_out
-        type(bilinearHZI_t), intent(in)    :: hzi_in
-
-        call hzi_type_eq(hzi_in, hzi_out)
-
-        hzi_out%wti             => hzi_in%wti
-        hzi_out%wtj             => hzi_in%wtj
-    end subroutine hzi_type_eq_bilinear
-
-    subroutine hzi_type_eq_spherical(hzi_in, hzi_out)
-        type(sphericalHZI_t), intent(inout) :: hzi_out
-        type(sphericalHZI_t), intent(in)    :: hzi_in
-
-        call hzi_type_eq(hzi_in, hzi_out)
-
-    end subroutine hzi_type_eq_spherical
-
-    subroutine hzi_type_eq_bicubic(hzi_in, hzi_out)
-        type(bicubicHZI_t), intent(inout) :: hzi_out
-        type(bicubicHZI_t), intent(in)    :: hzi_in
-
-        call hzi_type_eq(hzi_in, hzi_out)
-
-        hzi_out%wti             => hzi_in%wti
-        hzi_out%ilon            => hzi_in%ilon
-        hzi_out%jlat            => hzi_in%jlat
-    end subroutine hzi_type_eq_bicubic
-
 
 end module horizontal_interpolator_types_mod

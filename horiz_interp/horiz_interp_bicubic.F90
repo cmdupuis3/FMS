@@ -176,8 +176,8 @@ module horizontal_interpolator_bicubic_mod
     allocate ( Interp%lat_in (nlat_in) )
     allocate ( Interp%rat_x  (nlon_out, nlat_out) )
     allocate ( Interp%rat_y  (nlon_out, nlat_out) )
-    allocate ( Interp%i_lon  (nlon_out, nlat_out, 2) )
-    allocate ( Interp%j_lat  (nlon_out, nlat_out, 2) )
+    allocate ( Interp%ilon  (nlon_out, nlat_out, 2) )
+    allocate ( Interp%jlat  (nlon_out, nlat_out, 2) )
 
     Interp%lon_in = lon_in
     Interp%lat_in = lat_in
@@ -275,10 +275,10 @@ module horizontal_interpolator_bicubic_mod
             icu = indu(Interp%lon_in, xz)
             Interp%rat_x(i,j) = (xz - Interp%lon_in(icl))/(Interp%lon_in(icu) - Interp%lon_in(icl))
           endif
-          Interp%j_lat(i,j,1) = jcl
-          Interp%j_lat(i,j,2) = jcu
-          Interp%i_lon(i,j,1) = icl
-          Interp%i_lon(i,j,2) = icu
+          Interp%jlat(i,j,1) = jcl
+          Interp%jlat(i,j,2) = jcu
+          Interp%ilon(i,j,1) = icl
+          Interp%ilon(i,j,2) = icu
           if(jcl == jcu) then
              Interp%rat_y(i,j) = 0.0
           else
@@ -318,8 +318,8 @@ module horizontal_interpolator_bicubic_mod
     allocate ( Interp%lat_in  (nlat_in) )
     allocate ( Interp%rat_x   (nlon_out, nlat_out) )
     allocate ( Interp%rat_y   (nlon_out, nlat_out) )
-    allocate ( Interp%i_lon   (nlon_out, nlat_out, 2) )
-    allocate ( Interp%j_lat   (nlon_out, nlat_out, 2) )
+    allocate ( Interp%ilon   (nlon_out, nlat_out, 2) )
+    allocate ( Interp%jlat   (nlon_out, nlat_out, 2) )
 
     Interp%lon_in = lon_in
     Interp%lat_in = lat_in
@@ -412,10 +412,10 @@ module horizontal_interpolator_bicubic_mod
           endif
           icl = indl(lon_in, xz)
           icu = indu(lon_in, xz)
-          Interp%j_lat(i,j,1) = jcl
-          Interp%j_lat(i,j,2) = jcu
-          Interp%i_lon(i,j,1) = icl
-          Interp%i_lon(i,j,2) = icu
+          Interp%jlat(i,j,1) = jcl
+          Interp%jlat(i,j,2) = jcu
+          Interp%ilon(i,j,1) = icl
+          Interp%ilon(i,j,2) = icu
           if(jcl == jcu) then
              Interp%rat_y(i,j) = 0.0
           else
@@ -458,10 +458,10 @@ module horizontal_interpolator_bicubic_mod
       do i=1, Interp%nlon_dst
         yz  = Interp%rat_y(i,j)
         xz  = Interp%rat_x(i,j)
-        jcl = Interp%j_lat(i,j,1)
-        jcu = Interp%j_lat(i,j,2)
-        icl = Interp%i_lon(i,j,1)
-        icu = Interp%i_lon(i,j,2)
+        jcl = Interp%jlat(i,j,1)
+        jcu = Interp%jlat(i,j,2)
+        icl = Interp%ilon(i,j,1)
+        icu = Interp%ilon(i,j,2)
         if( icl > icu ) then
           iclp1 = icu
           icum1 = icl
@@ -739,3 +739,4 @@ module horizontal_interpolator_bicubic_mod
   end subroutine hzi_delete_bicubic
 
 end module horizontal_interpolator_bicubic_mod
+
