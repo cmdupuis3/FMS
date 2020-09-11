@@ -243,14 +243,14 @@ contains
     endif
 
     ! allocate memory to data type
-    if(ASSOCIATED(Interp%i_lon)) then
-       if(size(Interp%i_lon,1) .NE. map_dst_xsize .OR.     &
-          size(Interp%i_lon,2) .NE. map_dst_ysize )  call mpp_error(FATAL, &
-          'horiz_interp_spherical_mod: size(Interp%i_lon(:),1) .NE. map_dst_xsize .OR. '// &
-          'size(Interp%i_lon(:),2) .NE. map_dst_ysize')
+    if(ASSOCIATED(Interp%ilon)) then
+       if(size(Interp%ilon,1) .NE. map_dst_xsize .OR.     &
+          size(Interp%ilon,2) .NE. map_dst_ysize )  call mpp_error(FATAL, &
+          'horiz_interp_spherical_mod: size(Interp%ilon(:),1) .NE. map_dst_xsize .OR. '// &
+          'size(Interp%ilon(:),2) .NE. map_dst_ysize')
     else
-       allocate(Interp%i_lon(map_dst_xsize,map_dst_ysize,max_neighbors), &
-            Interp%j_lat(map_dst_xsize,map_dst_ysize,max_neighbors),     &
+       allocate(Interp%ilon(map_dst_xsize,map_dst_ysize,max_neighbors), &
+            Interp%jlat(map_dst_xsize,map_dst_ysize,max_neighbors),     &
             Interp%src_dist(map_dst_xsize,map_dst_ysize,max_neighbors),  &
             Interp%num_found(map_dst_xsize,map_dst_ysize)       )
     endif
@@ -287,8 +287,8 @@ contains
                 endif
              endif
           enddo
-          Interp%i_lon(i,j,:)         = ilon(:)
-          Interp%j_lat(i,j,:)         = jlat(:)
+          Interp%ilon(i,j,:)         = ilon(:)
+          Interp%jlat(i,j,:)         = jlat(:)
           Interp%num_found(i,j)       = num_found(i,j)
           Interp%src_dist(i,j,:)      = map_src_dist(i,j,:)
        enddo
@@ -380,13 +380,13 @@ contains
           if(num_found == 0 ) then
              mask_dst(m,n) = 0.0
           else
-             i1 = Interp%i_lon(m,n,1); j1 = Interp%j_lat(m,n,1)
+             i1 = Interp%ilon(m,n,1); j1 = Interp%jlat(m,n,1)
              if (mask_src(i1,j1) .lt. 0.5) then
                 mask_dst(m,n) = 0.0
              endif
 
              if(num_found .gt. 1 ) then
-                i2 = Interp%i_lon(m,n,2); j2 = Interp%j_lat(m,n,2)
+                i2 = Interp%ilon(m,n,2); j2 = Interp%jlat(m,n,2)
                 ! compare first 2 nearest neighbors -- if they are nearly
                 ! equidistant then use this mask for robustness
                 if(abs(Interp%src_dist(m,n,2)-Interp%src_dist(m,n,1)) .lt. epsln) then
@@ -396,7 +396,7 @@ contains
 
              sum=0.0
              do k=1, num_found
-                if(mask_src(Interp%i_lon(m,n,k),Interp%j_lat(m,n,k)) .lt. 0.5 ) then
+                if(mask_src(Interp%ilon(m,n,k),Interp%jlat(m,n,k)) .lt. 0.5 ) then
                    wt(m,n,k) = 0.0
                 else
                    if (Interp%src_dist(m,n,k) <= epsln) then
@@ -426,8 +426,8 @@ contains
        do m=1,nlon_out
           if(mask_dst(m,n) .gt. 0.5) then
              do k=1, Interp%num_found(m,n)
-                i = Interp%i_lon(m,n,k)
-                j = Interp%j_lat(m,n,k)
+                i = Interp%ilon(m,n,k)
+                j = Interp%jlat(m,n,k)
                 data_out(m,n) = data_out(m,n)+data_in(i,j)*wt(m,n,k)
              enddo
           else
@@ -507,13 +507,13 @@ contains
           if(num_found == 0 ) then
              mask_dst(m,n) = 0.0
           else
-             i1 = Interp%i_lon(m,n,1); j1 = Interp%j_lat(m,n,1)
+             i1 = Interp%ilon(m,n,1); j1 = Interp%jlat(m,n,1)
              if (mask_src(i1,j1) .lt. 0.5) then
                 mask_dst(m,n) = 0.0
              endif
 
              if(num_found .gt. 1 ) then
-                i2 = Interp%i_lon(m,n,2); j2 = Interp%j_lat(m,n,2)
+                i2 = Interp%ilon(m,n,2); j2 = Interp%jlat(m,n,2)
                 ! compare first 2 nearest neighbors -- if they are nearly
                 ! equidistant then use this mask for robustness
                 if(abs(Interp%src_dist(m,n,2)-Interp%src_dist(m,n,1)) .lt. epsln) then
@@ -523,7 +523,7 @@ contains
 
              sum=0.0
              do k=1, num_found
-                if(mask_src(Interp%i_lon(m,n,k),Interp%j_lat(m,n,k)) .lt. 0.5 ) then
+                if(mask_src(Interp%ilon(m,n,k),Interp%jlat(m,n,k)) .lt. 0.5 ) then
                    wt(m,n,k) = 0.0
                 else
                    if (Interp%src_dist(m,n,k) <= epsln) then
@@ -579,8 +579,8 @@ contains
 
     if(associated(Interp%src_dist))  deallocate(Interp%src_dist)
     if(associated(Interp%num_found)) deallocate(Interp%num_found)
-    if(associated(Interp%i_lon))     deallocate(Interp%i_lon)
-    if(associated(Interp%j_lat))     deallocate(Interp%j_lat)
+    if(associated(Interp%ilon))     deallocate(Interp%ilon)
+    if(associated(Interp%jlat))     deallocate(Interp%jlat)
 
   end subroutine hzi_delete_spherical
 
@@ -963,3 +963,4 @@ contains
   end subroutine full_search
 
 end module horizontal_interpolator_spherical_mod
+

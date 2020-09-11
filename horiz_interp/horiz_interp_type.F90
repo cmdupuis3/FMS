@@ -68,6 +68,8 @@ module horizontal_interpolator_types_mod
     end type bilinearHZI_t
 
     type, extends(baseHZI_t) :: sphericalHZI_t
+        integer, dimension(:,:,:), pointer :: ilon => NULL() !< indices
+        integer, dimension(:,:,:), pointer :: jlat => NULL() !< indices
     end type sphericalHZI_t
 
     type, extends(baseHZI_t) :: bicubicHZI_t
@@ -82,3 +84,4 @@ module horizontal_interpolator_types_mod
 contains
 
 end module horizontal_interpolator_types_mod
+
