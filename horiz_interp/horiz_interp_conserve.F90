@@ -47,7 +47,7 @@ module horizontal_interpolator_conservative_mod
   use fms_io_mod,            only: get_great_circle_algorithm
   use constants_mod,         only: PI
   use horizontal_interpolator_types_mod, only: conservative1HZI_t, conservative2HZI_t
-  use horizontal_interpolator_stats_mod, only : stats
+  use horizontal_interpolator_stats_mod, only : stats_conservative
 
 
   implicit none
@@ -834,9 +834,6 @@ contains
              if (present(mask_in)) then
                 call data_sum ( data_in(is:ie,js:je), Interp%area_src(is:ie,js:je), &
                      fis, fie, fjs,fje, dwtsum, wtsum, arsum, mask_in(is:ie,js:je)  )
-             else if( ASSOCIATED(Interp%mask_in) ) then
-                call data_sum ( data_in(is:ie,js:je), Interp%area_src(is:ie,js:je), &
-                     fis, fie, fjs,fje, dwtsum, wtsum, arsum, Interp%mask_in(is:ie,js:je)  )
              else
                 call data_sum ( data_in(is:ie,js:je), Interp%area_src(is:ie,js:je), &
                      fis, fie, fjs,fje,  dwtsum, wtsum, arsum    )
@@ -859,7 +856,7 @@ contains
 
        ! compute statistics of input data
 
-       call stats(data_in, Interp%area_src, asum, dsum, wsum, min_in, max_in, miss_in, mask_in)
+       call stats_conservative(data_in, Interp%area_src, asum, dsum, wsum, min_in, max_in, miss_in, mask_in)
        ! diagnostic messages
        ! on the root_pe, we can calculate the global mean, minimum and maximum.
        if(pe == root_pe) then
@@ -873,7 +870,7 @@ contains
        endif
 
        ! compute statistics of output data
-       call stats(data_out, Interp%area_dst, asum, dsum, wsum, min_out, max_out, miss_out, mask_out)
+       call stats_conservative(data_out, Interp%area_dst, asum, dsum, wsum, min_out, max_out, miss_out, mask_out)
        ! diagnostic messages
        if(pe == root_pe) then
           if (wsum > 0.0) then

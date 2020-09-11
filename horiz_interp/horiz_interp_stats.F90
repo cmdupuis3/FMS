@@ -7,7 +7,7 @@ module horizontal_interpolator_stats_mod
     implicit none
     private
 
-    public :: stats
+    public :: stats, stats_conservative
 
 contains
 
@@ -80,6 +80,69 @@ contains
         return
 
     end subroutine stats
+
+    !> These statistics are for conservative schemes
+    subroutine stats_conservative ( dat, area, asum, dsum, wsum, low, high, miss, mask )
+        real,    intent(in)  :: dat(:,:), area(:,:)
+        real,    intent(out) :: asum, dsum, wsum, low, high
+        integer, intent(out) :: miss
+        real,    intent(in), optional :: mask(:,:)
+
+        integer :: pe, root_pe, npes, p, buffer_int(1)
+        real    :: buffer_real(5)
+
+        pe = mpp_pe()
+        root_pe = mpp_root_pe()
+        npes = mpp_npes()
+
+        ! sum data, data*area; and find min,max on each pe.
+
+        if (present(mask)) then
+            asum = sum(area(:,:))
+            dsum = sum(area(:,:)*dat(:,:)*mask(:,:))
+            wsum = sum(area(:,:)*mask(:,:))
+            miss = count(mask(:,:) <= 0.5)
+            low  = minval(dat(:,:),mask=mask(:,:) > 0.5)
+            high = maxval(dat(:,:),mask=mask(:,:) > 0.5)
+        else
+            asum = sum(area(:,:))
+            dsum = sum(area(:,:)*dat(:,:))
+            wsum = sum(area(:,:))
+            miss = 0
+            low  = minval(dat(:,:))
+            high = maxval(dat(:,:))
+        endif
+
+        ! other pe send local min, max, avg to the root pe and
+        ! root pe receive these information
+
+        if(pe == root_pe) then
+            do p = 1, npes - 1
+                ! Force use of "scalar", integer pointer mpp interface
+                call mpp_recv(buffer_real(1),glen=5,from_pe=root_pe+p, tag=COMM_TAG_1)
+                asum = asum + buffer_real(1)
+                dsum = dsum + buffer_real(2)
+                wsum = wsum + buffer_real(3)
+                low  = min(low, buffer_real(4))
+                high = max(high, buffer_real(5))
+                call mpp_recv(buffer_int(1),glen=1,from_pe=root_pe+p, tag=COMM_TAG_2)
+                miss = miss + buffer_int(1)
+            enddo
+        else
+            buffer_real(1) = asum
+            buffer_real(2) = dsum
+            buffer_real(3) = wsum
+            buffer_real(4) = low
+            buffer_real(5) = high
+            ! Force use of "scalar", integer pointer mpp interface
+            call mpp_send(buffer_real(1),plen=5,to_pe=root_pe, tag=COMM_TAG_1)
+            buffer_int(1) = miss
+            call mpp_send(buffer_int(1),plen=1,to_pe=root_pe, tag=COMM_TAG_2)
+        endif
+
+        call mpp_sync_self()
+
+    end subroutine stats_conservative
 
 
 end module horizontal_interpolator_stats_mod
