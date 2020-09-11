@@ -106,6 +106,7 @@ end interface
   public :: hzi_conservative_new_1dx1d, hzi_conservative_new_1dx2d
   public :: hzi_conservative_new_2dx1d, hzi_conservative_new_2dx2d
   public :: hzi_delete_conservative1, hzi_delete_conservative2
+  public :: hzi_conservative
 
   integer :: pe, root_pe
 

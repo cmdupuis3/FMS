@@ -43,6 +43,7 @@ module horizontal_interpolator_types_mod
     type, extends(baseHZI_t) :: conservativeHZI_t
     end type conservativeHZI_t
 
+    !> For conservative interpolation of 1d -> 1d
     type, extends(conservativeHZI_t) :: conservative1HZI_t
         real,    dimension(:,:), pointer :: faci => NULL()   !< weights
         real,    dimension(:,:), pointer :: facj => NULL()   !< weights
@@ -50,6 +51,7 @@ module horizontal_interpolator_types_mod
         integer, dimension(:,:), pointer :: jlat => NULL()   !< indices
     end type conservative1HZI_t
 
+    !> For conservative interpolation of 1d -> 2d, 2d -> 1d, or 2d -> 2d
     type, extends(conservativeHZI_t) :: conservative2HZI_t
         integer                          :: nxgrid                  !< number of exchange grid between src and dst grid.
         integer, dimension(:),   pointer :: i_src => NULL()         !< indices in source grid.

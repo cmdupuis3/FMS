@@ -42,7 +42,7 @@ module horiz_interp_mod
     use horizontal_interpolator_types_mod,      only: conservativeHZI_t, baseHZI_t
 
     use horizontal_interpolator_conservative_mod,  only: hzi_conservative_init, hzi_conservative
-    use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative11, hzi_delete_conservative2
+    use horizontal_interpolator_conservative_mod,  only: hzi_delete_conservative1, hzi_delete_conservative2
     use horizontal_interpolator_conservative_mod,  only: hzi_conservative_new_1dx1d, hzi_conservative_new_1dx2d
     use horizontal_interpolator_conservative_mod,  only: hzi_conservative_new_2dx1d, hzi_conservative_new_1dx2d
     use horizontal_interpolator_bilinear_mod,  only: hzi_bilinear_init, hzi_bilinear, hzi_delete_bilinear
@@ -239,7 +239,7 @@ module horiz_interp_mod
 
 
     ! Include variable "version" to be written to log file.
-    #include<file_version.h>
+    #include <file_version.h>
     logical :: module_is_initialized = .FALSE.
 
 contains
@@ -430,7 +430,7 @@ contains
 
     end function hzi_new_bilinear_1dx1d
 
-    function hzi_new_bilinear_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bilinear_1dx2d (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
         type(bilinearHZI_t) :: Interp
         real, intent(in),  dimension(:)    :: lon_in , lat_in
@@ -523,7 +523,7 @@ contains
 
     end function hzi_new_bilinear_1dx1d_centered
 
-    function hzi_new_bilinear_1dx2d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
+    function hzi_new_bilinear_1dx2d_centered (lon_in, lat_in, lon_out, lat_out, verbose, src_modulo) result(Interp)
 
         type(bilinearHZI_t) :: Interp
         real, intent(in),  dimension(:)    :: lon_in , lat_in
@@ -570,7 +570,7 @@ contains
 
     end function hzi_new_bicubic_1dx1d
 
-    function hzi_new_bicubic_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
+    function hzi_new_bicubic_1dx2d (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:)   :: lon_in , lat_in
@@ -609,7 +609,7 @@ contains
 
     end function hzi_new_bicubic_1dx1d_centered
 
-    function hzi_new_bicubic_1dx2d_centered (Interp, lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
+    function hzi_new_bicubic_1dx2d_centered (lon_in, lat_in, lon_out, lat_out, verbose) result(Interp)
 
         type(bicubicHZI_t) :: Interp
         real, intent(in), dimension(:)   :: lon_in , lat_in
@@ -656,7 +656,7 @@ contains
 
     end function hzi_new_spherical_1dx1d
 
-    function hzi_new_spherical_1dx2d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
+    function hzi_new_spherical_1dx2d (lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
 
         type(sphericalHZI_t) :: Interp
         real, intent(in), dimension(:)   :: lon_in , lat_in
@@ -697,7 +697,7 @@ contains
 
     end function hzi_new_spherical_2dx2d
 
-    function hzi_new_spherical_2dx1d (Interp, lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
+    function hzi_new_spherical_2dx1d (lon_in, lat_in, lon_out, lat_out, num_nbrs, max_dist, src_modulo) result(Interp)
 
         type(sphericalHZI_t) :: Interp
         real, intent(in), dimension(:,:) :: lon_in , lat_in
@@ -767,20 +767,20 @@ contains
         integer :: n
 
         do n = 1, size(data_in,3)
-            if (present(mask_in))
+            if (present(mask_in)) then
                 if(present(mask_out)) then
-                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose, &
                         mask_in = mask_in(:,:,n), mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
                 else
-                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose, &
                         mask_in = mask_in(:,:,n),                             missing_value = missing_value, missing_permit = missing_permit )
                 endif
             else
                 if(present(mask_out)) then
-                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose, &
                                                   mask_out = mask_out(:,:,n), missing_value = missing_value, missing_permit = missing_permit )
                 else
-                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose,
+                    call hzi_interpolate_base_2d ( Interp, data_in(:,:,n), data_out(:,:,n), verbose, &
                                                                               missing_value = missing_value, missing_permit = missing_permit )
                 endif
             endif
@@ -836,3 +836,4 @@ contains
     end function is_lat_lon
 
 end module horiz_interp_mod
+
